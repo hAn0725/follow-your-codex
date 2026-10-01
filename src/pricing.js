@@ -1,0 +1,116 @@
+"use strict";
+
+// Reference prices per million tokens. They stay separate by provider and
+// currency: the dashboard must never silently add CNY and USD together.
+// Verified 2026-10-01. Sources: OpenAI, DeepSeek, Alibaba Model Studio, Zhipu.
+const PROVIDERS = {
+  openai: { label: "GPT / Codex", currency: "USD", source: "https://developers.openai.com/api/docs/pricing" },
+  deepseek: { label: "DeepSeek", currency: "USD", source: "https://api-docs.deepseek.com/quick_start/pricing/" },
+  qwen: { label: "Qwen", currency: "CNY", source: "https://help.aliyun.com/zh/model-studio/model-pricing" },
+  glm: { label: "GLM", currency: "CNY", source: "https://bigmodel.cn/pricing" },
+  codexReview: { label: "Codex 自动审查", currency: null, source: "https://developers.openai.com/docs/agent-approvals-security" },
+};
+
+// [uncached input, cached input, output]
+const RULES = [
+  // OpenAI standard, short-context reference prices per 1M tokens.
+  // A Codex/ChatGPT plan is not billed as an API invoice, so these values are
+  // intentionally displayed as an API-equivalent estimate only.
+  { provider: "openai", models: ["gpt-6-astra"], rates: [10, 1, 50] },
+  { provider: "openai", models: ["gpt-6.1-sol"], rates: [2, .1, 10] },
+  { provider: "openai", models: ["gpt-6-sol"], rates: [2, .2, 10] },
+  { provider: "openai", models: ["gpt-6-luna"], rates: [.1, .01, .5] },
+  { provider: "openai", models: ["gpt-5.6-sol"], rates: [4, .4, 20] },
+  { provider: "openai", models: ["gpt-5.6-terra"], rates: [2, .2, 12] },
+  { provider: "openai", models: ["gpt-5.6-luna"], rates: [.2, .02, 1.2] },
+  { provider: "openai", models: ["gpt-5.5"], rates: [5, .5, 30] },
+  { provider: "openai", models: ["gpt-5.4"], rates: [2.5, .25, 15] },
+  // Direct DeepSeek API, peak rate. Local metadata does not include whether a
+  // request was in an off-peak period, so that discount is not guessed.
+  { provider: "deepseek", models: ["deepseek-v4.1-flash", "deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp", "deepseek-chat", "deepseek-reasoner"], rates: [.3, .006, 1.2] },
+  // Alibaba Model Studio, standard 0–1M context tier.
+  { provider: "qwen", models: ["qwen3.8-flash"], rates: [.8, .1, 2.7] },
+  // Zhipu BigModel direct API, standard short-context tier.
+  { provider: "glm", models: ["glm-4.7"], rates: [2, .4, 8] },
+  // This is a Codex internal review route, not a public API model. Official
+  // documentation confirms that automatic review adds Codex usage, but does
+  // not publish a per-token API price for this route.
+  { provider: "codexReview", models: ["codex-auto-review"], rates: null, billing: "internal" },
+];
+
+function normalizedModel(model) {
+  const raw = String(model || "").trim().toLowerCase();
+  const bare = raw.split("/").at(-1);
+  return bare.replace(/-\d{4}-\d{2}-\d{2}$/, "");
+}
+
+function resolvePrice(model) {
+  const key = normalizedModel(model);
+  const rule = RULES.find((candidate) => candidate.models.includes(key));
+  return rule ? { ...rule, ...PROVIDERS[rule.provider], key } : null;
+}
+
+function emptyBucket(provider) {
+  const meta = PROVIDERS[provider];
+  return { provider, label: meta.label, currency: meta.currency, amount: 0, input: 0, cached: 0, output: 0, pricedTokens: 0, models: [] };
+}
+
+function applyCost(bucket, usage, rates) {
+  const cached = Math.min(Number(usage.input) || 0, Number(usage.cached) || 0);
+  const input = Math.max(0, (Number(usage.input) || 0) - cached) * rates[0] / 1e6;
+  const cachedCost = cached * rates[1] / 1e6;
+  const output = (Number(usage.output) || 0) * rates[2] / 1e6;
+  bucket.input += input;
+  bucket.cached += cachedCost;
+  bucket.output += output;
+  bucket.amount += input + cachedCost + output;
+  bucket.pricedTokens += Number(usage.total) || 0;
+}
+
+function estimateCost(events) {
+  const providers = Object.fromEntries(Object.keys(PROVIDERS).map((provider) => [provider, emptyBucket(provider)]));
+  const modelBuckets = new Map();
+  const unknown = new Set();
+  let pricedTokens = 0;
+  let unpricedTokens = 0;
+
+  for (const { model, usage } of events) {
+    const price = resolvePrice(model);
+    if (!price) {
+      unpricedTokens += Number(usage.total) || 0;
+      unknown.add(model);
+      continue;
+    }
+    if (!modelBuckets.has(model)) modelBuckets.set(model, { ...emptyBucket(price.provider), model, billing: price.billing || "metered" });
+    if (price.rates) {
+      applyCost(providers[price.provider], usage, price.rates);
+      applyCost(modelBuckets.get(model), usage, price.rates);
+      pricedTokens += Number(usage.total) || 0;
+    } else {
+      modelBuckets.get(model).pricedTokens += Number(usage.total) || 0;
+    }
+  }
+
+  for (const bucket of Object.values(providers)) {
+    bucket.models = [...new Set([...modelBuckets.values()].filter((row) => row.provider === bucket.provider).map((row) => row.model))];
+  }
+  const openai = providers.openai;
+  return {
+    // Keep legacy fields GPT-only: the main USD estimate never mixes currencies.
+    usd: openai.amount,
+    inputUsd: openai.input,
+    cachedUsd: openai.cached,
+    outputUsd: openai.output,
+    pricedTokens,
+    unpricedTokens,
+    unknownModels: [...unknown],
+    currency: "USD",
+    basis: "provider-separated-standard-short-context",
+    verifiedAt: "2026-10-01",
+    source: PROVIDERS.openai.source,
+    providers,
+    models: [...modelBuckets.values()].sort((a, b) => b.pricedTokens - a.pricedTokens),
+  };
+}
+
+module.exports = { estimateCost, resolvePrice, normalizedModel, PROVIDERS };

@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+.DS_Store
+*.log
+*.tmp
+*.bak
+follow-your-codex-*.csv
+follow-your-codex-*.json
+follow-your-codex-*.md
