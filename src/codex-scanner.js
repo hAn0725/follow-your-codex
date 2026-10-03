@@ -3,7 +3,7 @@
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { estimateCost, resolvePrice } = require("./pricing");
+const { estimateCost, isExcludedExternalModel, resolvePrice } = require("./pricing");
 
 const TOKEN_FIELDS = ["input", "cached", "output", "reasoning", "total"];
 
@@ -112,6 +112,10 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
       continue;
     }
     if (record.type !== "event_msg" || payload.type !== "token_count") continue;
+
+    // Retain compatibility if a newer Codex log supplies the model directly
+    // on the usage event rather than only in a preceding turn context record.
+    if (typeof payload.model === "string" && payload.model) model = payload.model;
 
     const timestamp = parseTimestamp(record.timestamp, fallbackMs);
     const info = payload.info && typeof payload.info === "object" ? payload.info : {};
@@ -305,7 +309,9 @@ function dateKeysForRange(range, events, now = new Date()) {
 
 function buildView(snapshot, range = "30", now = new Date()) {
   const start = rangeStart(range, now);
-  const selected = snapshot.events.filter((event) => event.timestamp >= start && event.timestamp <= now.getTime());
+  const selected = snapshot.events.filter((event) => (
+    event.timestamp >= start && event.timestamp <= now.getTime() && !isExcludedExternalModel(event.model)
+  ));
   const totals = selected.reduce((sum, event) => addUsage(sum, event.usage), emptyUsage());
   const todayKey = localDateKey(now.getTime());
   const today = selected
@@ -421,14 +427,15 @@ function buildView(snapshot, range = "30", now = new Date()) {
       ...row,
       provider: modelCost?.label || price?.label || "未配置价格",
       currency: modelCost?.currency || price?.currency || null,
-      estimatedCost: modelCost?.billing === "internal" ? null : (modelCost?.amount ?? null),
+      estimatedCost: modelCost?.amount ?? null,
       pricingStatus: modelCost?.billing || (price ? "metered" : "unpriced"),
+      pricingReference: modelCost?.referenceModel || null,
       cacheRate: row.usage.input ? Math.min(100, row.usage.cached / row.usage.input * 100) : null,
     };
   });
 
   return {
-    app: { name: "follow your codex", version: "0.2.0" },
+    app: { name: "follow your codex", version: "0.4.0" },
     range,
     codexHome: snapshot.codexHome,
     sessionsDir: snapshot.sessionsDir,

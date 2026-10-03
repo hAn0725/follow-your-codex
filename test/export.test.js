@@ -13,20 +13,20 @@ test("pricing separates cached input, includes reasoning only once, and exposes 
   assert.deepEqual(cost.unknownModels, ["unknown"]);
 });
 
-test("pricing keeps GPT, DeepSeek, Qwen, and GLM in separate provider buckets", () => {
+test("pricing excludes DeepSeek, MiMo, Qwen, and GLM from all estimates", () => {
   const usage = { input: 1000000, cached: 500000, output: 1000000, reasoning: 0, total: 2000000 };
   const cost = estimateCost([
     { model: "gpt-5.5", usage },
     { model: "deepseek-cloud/deepseek-v4.1-flash", usage },
+    { model: "mimo-v2", usage },
     { model: "qwen-cloud/qwen3.8-flash", usage },
     { model: "glm-cloud/glm-4.7", usage },
   ]);
   assert.equal(cost.providers.openai.currency, "USD");
-  assert.equal(cost.providers.qwen.currency, "CNY");
   assert.ok(Math.abs(cost.providers.openai.amount - 32.75) < 1e-9);
-  assert.ok(Math.abs(cost.providers.deepseek.amount - 1.353) < 1e-9);
-  assert.ok(Math.abs(cost.providers.qwen.amount - 3.15) < 1e-9);
-  assert.ok(Math.abs(cost.providers.glm.amount - 9.2) < 1e-9);
+  assert.deepEqual(Object.keys(cost.providers), ["openai"]);
+  assert.deepEqual(cost.models.map((model) => model.model), ["gpt-5.5"]);
+  assert.equal(cost.unpricedTokens, 0);
   assert.equal(cost.usd, cost.providers.openai.amount);
 });
 
@@ -48,13 +48,15 @@ test("pricing recognizes all current GPT-6 Codex model ids", () => {
   assert.equal(cost.unpricedTokens, 0);
 });
 
-test("codex auto review is identified as internal usage without inventing an API price", () => {
+test("codex auto review uses a labelled GPT-5.3-Codex proxy estimate", () => {
   const usage = { input: 1000, cached: 800, output: 100, reasoning: 0, total: 1100 };
   const cost = estimateCost([{ model: "codex-auto-review", usage }]);
   assert.equal(cost.unpricedTokens, 0);
-  assert.equal(cost.models[0].billing, "internal");
+  assert.equal(cost.models[0].billing, "proxy");
+  assert.equal(cost.models[0].referenceModel, "gpt-5.3-codex");
   assert.equal(cost.models[0].pricedTokens, 1100);
-  assert.equal(cost.models[0].currency, null);
+  assert.equal(cost.models[0].currency, "USD");
+  assert.ok(Math.abs(cost.models[0].amount - 0.00189) < 1e-12);
 });
 
 const view = {

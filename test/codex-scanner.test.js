@@ -98,3 +98,23 @@ test("buildView aggregates days, models, sessions, and today", () => {
   assert.equal(view.insights.peakDay.usage.total, 240);
   assert.equal(view.sessions[0].eventCount, 2);
 });
+
+test("buildView removes excluded external-provider events before all dashboard aggregates", () => {
+  const gpt = parseSessionText(jsonl([
+    { type: "session_meta", payload: { id: "gpt-session", cwd: "C:\\work\\gpt" } },
+    { type: "turn_context", payload: { model: "gpt-6.1-sol" } },
+    { type: "event_msg", timestamp: "2026-09-08T03:00:00Z", payload: { type: "token_count", info: { last_token_usage: { input_tokens: 100, output_tokens: 20, total_tokens: 120 } } } },
+  ]), "gpt-rollout.jsonl");
+  const external = parseSessionText(jsonl([
+    { type: "session_meta", payload: { id: "external-session", cwd: "C:\\work\\external" } },
+    { type: "turn_context", payload: { model: "deepseek/deepseek-flash" } },
+    { type: "event_msg", timestamp: "2026-09-08T03:00:00Z", payload: { type: "token_count", info: { last_token_usage: { input_tokens: 900, output_tokens: 100, total_tokens: 1000 } } } },
+  ]), "external-rollout.jsonl");
+  const view = buildView(aggregate([gpt, external], "C:\\Users\\demo\\.codex"), "7", new Date("2026-09-08T12:00:00Z"));
+
+  assert.equal(view.totals.total, 120);
+  assert.deepEqual(view.models.map((model) => model.name), ["gpt-6.1-sol"]);
+  assert.deepEqual(view.projects.map((project) => project.name), ["gpt"]);
+  assert.deepEqual(view.sessions.map((session) => session.id), ["gpt-session"]);
+  assert.equal(view.cost.usd > 0, true);
+});

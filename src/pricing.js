@@ -1,14 +1,10 @@
 "use strict";
 
-// Reference prices per million tokens. They stay separate by provider and
-// currency: the dashboard must never silently add CNY and USD together.
-// Verified 2026-10-01. Sources: OpenAI, DeepSeek, Alibaba Model Studio, Zhipu.
+// OpenAI standard, short-context reference prices per million tokens.
+// These are API-equivalent estimates, never ChatGPT/Codex subscription bills.
+// Verified 2026-10-03. Source: OpenAI pricing.
 const PROVIDERS = {
   openai: { label: "GPT / Codex", currency: "USD", source: "https://developers.openai.com/api/docs/pricing" },
-  deepseek: { label: "DeepSeek", currency: "USD", source: "https://api-docs.deepseek.com/quick_start/pricing/" },
-  qwen: { label: "Qwen", currency: "CNY", source: "https://help.aliyun.com/zh/model-studio/model-pricing" },
-  glm: { label: "GLM", currency: "CNY", source: "https://bigmodel.cn/pricing" },
-  codexReview: { label: "Codex 自动审查", currency: null, source: "https://developers.openai.com/docs/agent-approvals-security" },
 };
 
 // [uncached input, cached input, output]
@@ -25,23 +21,21 @@ const RULES = [
   { provider: "openai", models: ["gpt-5.6-luna"], rates: [.2, .02, 1.2] },
   { provider: "openai", models: ["gpt-5.5"], rates: [5, .5, 30] },
   { provider: "openai", models: ["gpt-5.4"], rates: [2.5, .25, 15] },
-  // Direct DeepSeek API, peak rate. Local metadata does not include whether a
-  // request was in an off-peak period, so that discount is not guessed.
-  { provider: "deepseek", models: ["deepseek-v4.1-flash", "deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp", "deepseek-chat", "deepseek-reasoner"], rates: [.3, .006, 1.2] },
-  // Alibaba Model Studio, standard 0–1M context tier.
-  { provider: "qwen", models: ["qwen3.8-flash"], rates: [.8, .1, 2.7] },
-  // Zhipu BigModel direct API, standard short-context tier.
-  { provider: "glm", models: ["glm-4.7"], rates: [2, .4, 8] },
-  // This is a Codex internal review route, not a public API model. Official
-  // documentation confirms that automatic review adds Codex usage, but does
-  // not publish a per-token API price for this route.
-  { provider: "codexReview", models: ["codex-auto-review"], rates: null, billing: "internal" },
+  // Codex auto review has no published route-specific rate. This clearly
+  // labelled proxy uses GPT-5.3-Codex standard API reference pricing.
+  { provider: "openai", models: ["codex-auto-review"], rates: [1.75, .175, 14], billing: "proxy", referenceModel: "gpt-5.3-codex" },
 ];
+
+const EXCLUDED_EXTERNAL_MODEL = /(?:deepseek|mimo|glm|qwen)/i;
 
 function normalizedModel(model) {
   const raw = String(model || "").trim().toLowerCase();
   const bare = raw.split("/").at(-1);
   return bare.replace(/-\d{4}-\d{2}-\d{2}$/, "");
+}
+
+function isExcludedExternalModel(model) {
+  return EXCLUDED_EXTERNAL_MODEL.test(String(model || ""));
 }
 
 function resolvePrice(model) {
@@ -75,13 +69,16 @@ function estimateCost(events) {
   let unpricedTokens = 0;
 
   for (const { model, usage } of events) {
+    if (isExcludedExternalModel(model)) continue;
     const price = resolvePrice(model);
     if (!price) {
       unpricedTokens += Number(usage.total) || 0;
       unknown.add(model);
       continue;
     }
-    if (!modelBuckets.has(model)) modelBuckets.set(model, { ...emptyBucket(price.provider), model, billing: price.billing || "metered" });
+    if (!modelBuckets.has(model)) modelBuckets.set(model, {
+      ...emptyBucket(price.provider), model, billing: price.billing || "metered", referenceModel: price.referenceModel || null,
+    });
     if (price.rates) {
       applyCost(providers[price.provider], usage, price.rates);
       applyCost(modelBuckets.get(model), usage, price.rates);
@@ -105,12 +102,12 @@ function estimateCost(events) {
     unpricedTokens,
     unknownModels: [...unknown],
     currency: "USD",
-    basis: "provider-separated-standard-short-context",
-    verifiedAt: "2026-10-01",
+    basis: "openai-standard-short-context",
+    verifiedAt: "2026-10-03",
     source: PROVIDERS.openai.source,
     providers,
     models: [...modelBuckets.values()].sort((a, b) => b.pricedTokens - a.pricedTokens),
   };
 }
 
-module.exports = { estimateCost, resolvePrice, normalizedModel, PROVIDERS };
+module.exports = { estimateCost, isExcludedExternalModel, resolvePrice, normalizedModel, PROVIDERS };

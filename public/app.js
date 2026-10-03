@@ -27,8 +27,8 @@ const translations = {
   }
 };
 const state = { range: "30", rank: "projects", data: null, contextData: null, timer: null, resizeTimer: null, requestId: 0, nextRefresh: 0, locale: localStorage.getItem("follow-your-codex:locale") || "zh", theme: localStorage.getItem("follow-your-codex:theme") || "dark", motion: false };
-Object.assign(translations.zh, { capacityTitle:"Codex 额度状态", tokenUsage:"Codex Token 用量", date:"日期", eventCount:"事件", costNote:"计价说明", overview:"概览", privacyCompact:"仅本地读取", overviewTitle:"使用概览", overviewSub:"用量、费用与额度。", providerSub:"费用按供应商与币种分别估算。", trendsSub:"活跃时间与项目占比。", dataSub:"本地读取，可导出。", pricingTitle:"金额如何估算？" });
-Object.assign(translations.en, { capacityTitle:"Codex capacity", tokenUsage:"Codex Token usage", date:"Date", eventCount:"Events", costNote:"Pricing notes", overview:"Overview", privacyCompact:"Local only", overviewTitle:"Usage at a glance", overviewSub:"Usage, cost, capacity.", providerSub:"Costs stay separate by provider and currency.", trendsSub:"Activity times and project share.", dataSub:"Local, exportable, private.", pricingTitle:"How is cost estimated?" });
+Object.assign(translations.zh, { capacityTitle:"Codex 额度状态", tokenUsage:"Codex Token 用量", date:"日期", eventCount:"事件", costNote:"计价说明", overview:"概览", privacyCompact:"仅本地读取", overviewTitle:"使用概览", overviewSub:"用量、费用与额度。", trendsSub:"活跃时间与项目占比。", dataSub:"本地读取，可导出。", pricingTitle:"金额如何估算？", pricingScope:"仅统计 GPT / Codex；输入、缓存与输出分别计价。", pricingUnknown:"Unknown model 保留用量，但不计入金额。自动审查采用 GPT-5.3-Codex 代理估算。", unknownModel:"未识别模型", unknownModelInfo:"仅计入用量，未计价", proxyEstimate:"代理估算" });
+Object.assign(translations.en, { capacityTitle:"Codex capacity", tokenUsage:"Codex Token usage", date:"Date", eventCount:"Events", costNote:"Pricing notes", overview:"Overview", privacyCompact:"Local only", overviewTitle:"Usage at a glance", overviewSub:"Usage, cost, capacity.", trendsSub:"Activity times and project share.", dataSub:"Local, exportable, private.", pricingTitle:"How is cost estimated?", pricingScope:"Only GPT / Codex is counted; input, cache, and output are priced separately.", pricingUnknown:"Unknown models keep verified usage but no cost. Auto review uses a GPT-5.3-Codex proxy estimate.", unknownModel:"Unidentified model", unknownModelInfo:"Usage only, not priced", proxyEstimate:"Proxy estimate" });
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const t = (key, values = {}) => String(translations[state.locale]?.[key] ?? translations.zh[key] ?? key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
@@ -52,8 +52,8 @@ $$(".trend-panel h2, .heat-panel h3, .ranking-panel h3, .mix-panel h2, .daily-pa
 });
 
 const staticCopy = {
-  ".usage-hero .section-heading h2":"tokenUsage", ".usage-hero .section-heading .eyebrow":"overview", ".quota-hero .section-heading h2":"capacityTitle", ".hero-label":"cumulative", ".cost-line span:last-child":"apiValue", ".hero-breakdown a":"costNote", ".provider-cost-panel .section-heading h2":"providerTitle", ".provider-cost-panel .section-heading p":"providerSub", ".provider-cost-panel .status-pill":"localEstimate", ".metrics-grid article:nth-child(1)>span":"todayUse", ".metrics-grid article:nth-child(2)>span":"dailyAverage", ".metrics-grid article:nth-child(3)>span":"cacheHit", ".metrics-grid article:nth-child(4)>span":"activeDays", ".trend-panel h2":"trendTitle", ".trend-panel .legend span:first-child":"dailyTotal", "#trendHint":"hoverDetail", ".mix-panel h2":"tokenMix", "#donut span":"total", ".trend-panel + .mix-panel":null,
-  ".section-title-row h2":"trendsTitle", ".section-title-row > p":"trendsSub", ".heat-panel h3":"heatTitle", "#heatHint":"heatHint", ".ranking-panel h3":"projectRank", ".ranking-panel p":"projectRankSub", ".project-pie-panel h3":"projectPie", ".project-pie-panel p":"projectPieSub", ".extra-analysis > article:nth-child(1) h3":"cacheTrend", ".extra-analysis > article:nth-child(1) p":"cacheHint", ".extra-analysis > article:nth-child(2) h3":"ioTitle", ".extra-analysis > article:nth-child(2) p":"ioSub", ".cumulative-panel h3":"cumulative", ".weekly-pattern-heading span":"weekly", ".weekly-pattern-heading small":"localAggregate", ".extra-analysis > article:nth-child(4) h3":"efficiency", ".extra-analysis > article:nth-child(4) p":"efficiencySub", ".daily-panel h3":"daily", ".daily-panel p":"dailySub", ".daily-panel th:nth-child(1)":"date", ".daily-panel th:nth-child(2)":"total", ".daily-panel th:nth-child(3)":"input", ".daily-panel th:nth-child(4)":"cached", ".daily-panel th:nth-child(5)":"output", ".daily-panel th:nth-child(6)":"eventCount", "#data-title":"dataTitle", "#data-title + p":"dataSub", ".pricing-note h3":"pricingTitle", ".export-card h3":"exportTitle", ".export-card p":"exportSub", ".source-card h3":"sourceTitle", "#footerStatus":"sourceEmpty"
+  ".usage-hero .section-heading h2":"tokenUsage", ".usage-hero .section-heading .eyebrow":"overview", ".quota-hero .section-heading h2":"capacityTitle", ".hero-label":"cumulative", ".cost-line span:last-child":"apiValue", ".hero-breakdown a":"costNote", ".metrics-grid article:nth-child(1)>span":"todayUse", ".metrics-grid article:nth-child(2)>span":"dailyAverage", ".metrics-grid article:nth-child(3)>span":"cacheHit", ".metrics-grid article:nth-child(4)>span":"activeDays", ".trend-panel h2":"trendTitle", ".trend-panel .legend span:first-child":"dailyTotal", "#trendHint":"hoverDetail", ".mix-panel h2":"tokenMix", "#donut span":"total", ".trend-panel + .mix-panel":null,
+  ".section-title-row h2":"trendsTitle", ".section-title-row > p":"trendsSub", ".heat-panel h3":"heatTitle", "#heatHint":"heatHint", ".ranking-panel h3":"projectRank", ".ranking-panel p":"projectRankSub", ".project-pie-panel h3":"projectPie", ".project-pie-panel p":"projectPieSub", ".extra-analysis > article:nth-child(1) h3":"cacheTrend", ".extra-analysis > article:nth-child(1) p":"cacheHint", ".extra-analysis > article:nth-child(2) h3":"ioTitle", ".extra-analysis > article:nth-child(2) p":"ioSub", ".cumulative-panel h3":"cumulative", ".weekly-pattern-heading span":"weekly", ".weekly-pattern-heading small":"localAggregate", ".extra-analysis > article:nth-child(4) h3":"efficiency", ".extra-analysis > article:nth-child(4) p":"efficiencySub", ".daily-panel h3":"daily", ".daily-panel p":"dailySub", ".daily-panel th:nth-child(1)":"date", ".daily-panel th:nth-child(2)":"total", ".daily-panel th:nth-child(3)":"input", ".daily-panel th:nth-child(4)":"cached", ".daily-panel th:nth-child(5)":"output", ".daily-panel th:nth-child(6)":"eventCount", "#data-title":"dataTitle", "#data-title + p":"dataSub", ".pricing-note h3":"pricingTitle", ".pricing-note p:nth-of-type(1)":"pricingScope", ".pricing-note p:nth-of-type(2)":"pricingUnknown", ".export-card h3":"exportTitle", ".export-card p":"exportSub", ".source-card h3":"sourceTitle", "#footerStatus":"sourceEmpty"
 };
 function setStaticCopy() {
   Object.entries(staticCopy).forEach(([selector, key]) => {
@@ -63,9 +63,6 @@ function setStaticCopy() {
     if (existingIcon) node.replaceChildren(existingIcon, document.createTextNode(t(key)));
     else node.textContent = t(key);
   });
-  const pricing = $$(".pricing-note p");
-  if (pricing[0]) pricing[0].textContent = state.locale === "en" ? "Input, cache, and output are priced separately." : "输入、缓存与输出分别计价。";
-  if (pricing[1]) pricing[1].textContent = state.locale === "en" ? "Providers and currencies stay separate." : "供应商与币种独立显示，不合并。";
   const dataSub = $("#data-source .section-title-row>p"); if (dataSub) dataSub.textContent = t("dataSub");
 }
 function updateRangeUI(value = Number($("#rangeSlider").value)) {
@@ -181,8 +178,7 @@ function renderSummary(data) {
   $("#estimatedCost").textContent = money(gptCost);
   $("#rangeLabel").textContent = data.range === "all" ? t("allHistory") : t("recent", { n:data.range });
   $("#costCoverage").textContent = gptCost.pricedTokens ? t("gptPriced", { n:formatNumber(gptCost.pricedTokens) }) : t("noGpt");
-  $("#costParts").textContent = `GPT / Codex: ${t("input")} $${(gptCost.input ?? data.cost.inputUsd).toFixed(2)} · ${t("cached")} $${(gptCost.cached ?? data.cost.cachedUsd).toFixed(2)} · ${t("output")} $${(gptCost.output ?? data.cost.outputUsd).toFixed(2)}` + (data.cost.unknownModels.length ? ` · ${t("unpriced")}：${data.cost.unknownModels.join(state.locale === "en" ? ", " : "、")}` : "");
-  renderProviderCosts(data.cost);
+  $("#costParts").textContent = `GPT / Codex: ${t("input")} $${(gptCost.input ?? data.cost.inputUsd).toFixed(2)} · ${t("cached")} $${(gptCost.cached ?? data.cost.cachedUsd).toFixed(2)} · ${t("output")} $${(gptCost.output ?? data.cost.outputUsd).toFixed(2)}` + (data.cost.unknownModels.length ? ` · ${t("unknownModel")}：${t("unknownModelInfo")}` : "");
   const recent = data.daily.slice(-7), peak = Math.max(1, ...recent.map((d) => d.usage.total));
   $("#miniBars").innerHTML = recent.map((d) => `<i style="height:${Math.max(2, d.usage.total / peak * 100)}%" title="${d.date} · ${formatFull(d.usage.total)} Token"></i>`).join("");
   setCount("#totalTokens", data.totals.total);
@@ -209,17 +205,6 @@ function renderSummary(data) {
   $("#busyWeekday").textContent = busyDay && busyDay.total ? t("mostActive", { n:weekdays()[busyDay.weekday] }) : t("localTime");
   $("#recentAverage").textContent = formatNumber(data.insights.recentAverage);
   $("#projection").textContent = formatNumber(data.insights.projected30Days);
-}
-
-function renderProviderCosts(cost) {
-  const providers = cost.providers || {};
-  const order = ["deepseek", "qwen", "glm"];
-  $("#providerCosts").innerHTML = order.map((provider) => {
-    const row = providers[provider];
-    const hasUsage = row?.pricedTokens > 0;
-    const modelNames = row?.models?.length ? row.models.join(state.locale === "en" ? ", " : "、") : t("modelUsage");
-    return `<div class="provider-cost-row provider-${provider}"><div class="provider-name"><i></i><strong>${escapeHtml(row?.label || provider)}</strong><small>${escapeHtml(modelNames)}</small></div><div><span>${t("token")}</span><b>${hasUsage ? formatNumber(row.pricedTokens) : "—"}</b></div><div><span>${t("separateBilling")}</span><b>${hasUsage ? formatMoney(row.amount, row.currency) : "—"}</b></div></div>`;
-  }).join("");
 }
 
 function renderLimits(data) {
@@ -459,8 +444,11 @@ function renderExtraAnalysis(data, timelineData = data) {
   </svg>`;
   $("#modelShare").innerHTML = data.models.length ? data.models.map((row) => {
     const cacheRate = row.cacheRate;
-    const cost = row.pricingStatus === "internal" ? t("priceUnavailable") : row.estimatedCost === null ? t("unpriced") : formatMoney(row.estimatedCost, row.currency);
-    return `<div class="model-efficiency-row"><div class="model-efficiency-head"><div><span>${escapeHtml(row.name)}</span><small>${escapeHtml(row.provider)}</small></div><b>${cacheRate === null ? "—" : `${cacheRate.toFixed(1)}%`}</b></div><div class="rank-bar cache-rate"><span style="width:${cacheRate || 0}%"></span></div><div class="model-efficiency-meta"><span>${t("cached")} ${formatNumber(row.usage.cached)} / ${t("input")} ${formatNumber(row.usage.input)}</span><span>${formatNumber(row.usage.total)} Token</span><strong>${cost}</strong></div></div>`;
+    const unknown = row.pricingStatus === "unpriced";
+    const cost = unknown ? t("unknownModelInfo") : row.pricingStatus === "proxy" ? `≈ ${formatMoney(row.estimatedCost, row.currency)} · ${t("proxyEstimate")}` : formatMoney(row.estimatedCost, row.currency);
+    const provider = unknown ? t("unknownModelInfo") : `${row.provider}${row.pricingReference ? ` · ${row.pricingReference}` : ""}`;
+    const name = unknown && row.name === "Unknown model" ? t("unknownModel") : row.name;
+    return `<div class="model-efficiency-row"><div class="model-efficiency-head"><div><span>${escapeHtml(name)}</span><small>${escapeHtml(provider)}</small></div><b>${cacheRate === null ? "—" : `${cacheRate.toFixed(1)}%`}</b></div><div class="rank-bar cache-rate"><span style="width:${cacheRate || 0}%"></span></div><div class="model-efficiency-meta"><span>${t("cached")} ${formatNumber(row.usage.cached)} / ${t("input")} ${formatNumber(row.usage.input)}</span><span>${formatNumber(row.usage.total)} Token</span><strong>${cost}</strong></div></div>`;
   }).join("") : `<div class="empty">${t("noModel")}</div>`;
   $("#efficiencySummary").textContent = `${t("cacheRate")} = ${t("cached")} ÷ ${t("input")} · ${state.locale === "en" ? "Average per event" : "平均每个用量事件"} ${formatNumber(data.eventCount ? data.totals.total/data.eventCount : 0)} Token`;
 }

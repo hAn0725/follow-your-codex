@@ -80,11 +80,6 @@
             <article class="metric-card"><span>活跃天数</span><strong id="activeDays">—</strong><small id="streak">连续活跃 — 天</small></article>
           </div>
 
-          <article class="panel provider-cost-panel" aria-labelledby="provider-cost-title">
-            <div class="section-heading"><div><p class="eyebrow">SEPARATE BILLING</p><h2 id="provider-cost-title">模型供应商计费</h2><p>各家费用、币种与 GPT 用量彼此独立，不跨币种合计。</p></div><span class="status-pill">本地估算</span></div>
-            <div id="providerCosts" class="provider-costs"></div>
-          </article>
-
           <div class="dashboard-grid">
             <article class="panel trend-panel"><div class="section-heading"><div><p class="eyebrow">USAGE OVER TIME</p><h2>Token 使用趋势</h2></div><div class="legend" aria-label="图例"><span><i class="key input"></i>每日总量</span><span id="trendHint">悬停查看明细</span></div></div><div id="trendChart" class="trend-chart" aria-label="每日 Token 平滑曲线图"></div></article>
             <article class="panel mix-panel"><div class="section-heading"><div><p class="eyebrow">TOKEN MIX</p><h2>Token 构成</h2></div></div><div class="mix-body"><div id="donut" class="donut" role="img" aria-label="Token 构成图"><div><strong id="donutTotal">—</strong><span>总计</span></div></div><div id="mixLegend" class="mix-legend"></div></div></article>
@@ -117,7 +112,7 @@
         </section>
 
         <section id="data-source" class="section-anchor content-section" aria-labelledby="data-title">
-          <article id="pricing-note" class="panel pricing-note"><h3>金额如何估算？</h3><p>输入、缓存与输出分别计价。</p><p>供应商与币种独立显示，不合并。</p><p id="costParts">—</p><p class="pricing-links"><a href="https://developers.openai.com/api/docs/pricing" target="_blank" rel="noreferrer">OpenAI</a><a href="https://api-docs.deepseek.com/quick_start/pricing/" target="_blank" rel="noreferrer">DeepSeek</a><a href="https://help.aliyun.com/zh/model-studio/model-pricing" target="_blank" rel="noreferrer">Qwen</a><a href="https://bigmodel.cn/pricing" target="_blank" rel="noreferrer">GLM</a></p></article>
+          <article id="pricing-note" class="panel pricing-note"><h3>金额如何估算？</h3><p>仅统计 GPT / Codex；输入、缓存与输出分别计价。</p><p>Unknown model 保留用量，但不计入金额。自动审查采用 GPT-5.3-Codex 代理估算。</p><p id="costParts">—</p><p class="pricing-links"><a href="https://developers.openai.com/api/docs/pricing" target="_blank" rel="noreferrer">OpenAI 定价</a></p></article>
           <div class="section-title-row"><div><p class="eyebrow">LOCAL DATA</p><h2 id="data-title">数据与导出</h2></div><p>可验证、可带走、不上传</p></div>
           <div class="data-grid"><article class="panel source-card"><span class="source-icon">◎</span><div><h3>本机 Codex 会话元数据</h3><p id="sourcePath">—</p><small id="footerStatus">等待扫描</small></div></article><article class="panel export-card"><div><h3>导出当前范围</h3><p>CSV 适合表格分析，Markdown 适合归档，JSON 保留完整结构。</p></div><div class="export-actions"><a id="exportCsv" href="#">CSV</a><a id="exportMd" href="#">Markdown</a><a id="exportJson" href="#">JSON</a></div></article></div>
         </section>
