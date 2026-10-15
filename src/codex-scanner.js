@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const zlib = require("node:zlib");
 const { version } = require("../package.json");
 const { estimateCost, isExcludedExternalModel, resolvePrice } = require("./pricing");
 
@@ -82,7 +83,7 @@ function safeBasename(value) {
  * tool output and file content events are deliberately ignored.
  */
 function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.now()) {
-  let sessionId = path.basename(filePath, path.extname(filePath));
+  let sessionId = path.basename(filePath).replace(/\.jsonl(?:\.zst)?$/i, "");
   let project = "Unknown project";
   let model = "Unknown model";
   let previousTotal = null;
@@ -214,7 +215,7 @@ function listJsonlFiles(root) {
     for (const entry of entries) {
       const fullPath = path.join(directory, entry.name);
       if (entry.isDirectory()) pending.push(fullPath);
-      else if (entry.isFile() && entry.name.toLowerCase().endsWith(".jsonl")) files.push(fullPath);
+      else if (entry.isFile() && /\.jsonl(?:\.zst)?$/i.test(entry.name)) files.push(fullPath);
     }
   }
   return files;
@@ -231,27 +232,42 @@ class CodexScanner {
   scan() {
     const files = [...listJsonlFiles(this.sessionsDir), ...listJsonlFiles(this.archivedSessionsDir)];
     const seen = new Set(files);
+    const failures = new Map();
+    const warn = (code) => failures.set(code, (failures.get(code) || 0) + 1);
     for (const filePath of files) {
       let stat;
       try {
         stat = fs.statSync(filePath);
       } catch {
+        warn("read-failed");
         continue;
       }
       const cached = this.cache.get(filePath);
       if (cached && cached.size === stat.size && cached.mtimeMs === stat.mtimeMs) continue;
+      if (filePath.toLowerCase().endsWith(".zst") && typeof zlib.zstdDecompressSync !== "function") {
+        warn("zstd-unavailable");
+        continue;
+      }
       try {
-        const text = fs.readFileSync(filePath, "utf8");
+        const bytes = fs.readFileSync(filePath);
+        const text = filePath.toLowerCase().endsWith(".zst")
+          ? zlib.zstdDecompressSync(bytes).toString("utf8")
+          : bytes.toString("utf8");
         const parsed = parseSessionText(text, filePath, stat.mtimeMs);
         this.cache.set(filePath, { size: stat.size, mtimeMs: stat.mtimeMs, parsed });
       } catch {
         // A transiently locked file remains eligible for the next refresh.
+        warn("read-failed");
       }
     }
     for (const cachedPath of this.cache.keys()) {
       if (!seen.has(cachedPath)) this.cache.delete(cachedPath);
     }
-    return aggregate([...this.cache.values()].map((item) => item.parsed), this.codexHome);
+    const snapshot = aggregate([...this.cache.values()].map((item) => item.parsed), this.codexHome);
+    snapshot.scanWarnings = [...failures].map(([code, count]) => ({ code, count }));
+    snapshot.discoveredFileCount = files.length;
+    snapshot.compressedFileCount = files.filter((file) => file.toLowerCase().endsWith(".zst")).length;
+    return snapshot;
   }
 }
 
@@ -497,6 +513,9 @@ function buildView(snapshot, range = "30", now = new Date()) {
     sourceDirs: snapshot.sourceDirs,
     scannedAt: snapshot.scannedAt,
     fileCount: snapshot.fileCount,
+    discoveredFileCount: snapshot.discoveredFileCount,
+    compressedFileCount: snapshot.compressedFileCount,
+    scanWarnings: snapshot.scanWarnings || [],
     eventCount: selected.length,
     totals,
     today,

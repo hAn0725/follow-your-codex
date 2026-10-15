@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1 — 2026-10-15
+
+- Restore historical usage from `.jsonl.zst` files created by Codex history compression, in both active and archived session trees.
+- Keep reading plain JSONL and deduplicate compressed/uncompressed copies.
+- Surface read/decompression failures in both languages instead of silently omitting history.
+- Require Node.js 24+ for built-in Zstandard support; retain zero third-party runtime dependencies.
+- Add regression coverage for compressed archives, copied logs, and corrupt compressed files.
+
 ## 0.5.0 — 2026-10-15
 
 - Read both active sessions and archived sessions so archiving no longer removes historical usage from the dashboard.

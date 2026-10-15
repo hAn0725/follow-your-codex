@@ -6,10 +6,41 @@ const { aggregate, buildView, CodexScanner, parseSessionText, readUsage, usageDe
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const zlib = require("node:zlib");
 
 function jsonl(records) {
   return records.map((record) => JSON.stringify(record)).join("\n");
 }
+
+test("compressed September history and archive copies retain original dates without double counting", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-zstd-test-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, "sessions", "2026", "09"), { recursive: true });
+  fs.mkdirSync(path.join(root, "archived_sessions"));
+  const text = jsonl([
+    { type: "session_meta", payload: { id: "september-session" } },
+    { type: "turn_context", payload: { model: "gpt-6.1-sol" } },
+    { type: "event_msg", timestamp: "2026-09-21T12:00:00Z", payload: {
+      type: "token_count", info: { last_token_usage: { input_tokens: 1000, output_tokens: 100, total_tokens: 1100 } },
+    } },
+  ]);
+  fs.writeFileSync(path.join(root, "sessions", "2026", "09", "rollout.jsonl.zst"), zlib.zstdCompressSync(text));
+  fs.writeFileSync(path.join(root, "archived_sessions", "copy.jsonl"), text);
+  const scanner = new CodexScanner({ codexHome: root });
+  const view = buildView(scanner.scan(), "all", new Date("2026-10-15T12:00:00Z"));
+  assert.equal(view.totals.total, 1100);
+  assert.equal(view.daily.find((day) => day.date === "2026-09-21").usage.total, 1100);
+  assert.equal(view.daily.find((day) => day.date === "2026-10-15").usage.total, 0);
+  assert.equal(view.eventCount, 1);
+  assert.equal(view.compressedFileCount, 1);
+  assert.deepEqual(view.scanWarnings, []);
+  assert.equal(buildView(scanner.scan(), "all").totals.total, 1100);
+  fs.writeFileSync(path.join(root, "archived_sessions", "corrupt.jsonl.zst"), "corrupt");
+  const partial = buildView(scanner.scan(), "all");
+  assert.equal(partial.totals.total, 1100);
+  assert.deepEqual(partial.scanWarnings, [{ code: "read-failed", count: 1 }]);
+  assert.equal(partial.discoveredFileCount, 3);
+});
 
 test("migrated usage records replace legacy mirrors with different cumulative baselines", () => {
   const usage = { input_tokens: 100, cached_input_tokens: 40, output_tokens: 20, total_tokens: 120 };

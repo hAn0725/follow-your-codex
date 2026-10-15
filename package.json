@@ -1,6 +1,6 @@
 {
   "name": "follow-your-codex",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "A lightweight, local-only Codex token usage dashboard.",
   "license": "MIT",
@@ -10,6 +10,6 @@
     "test": "node --test test/codex-scanner.test.js test/export.test.js test/desktop-lifecycle.test.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   }
 }

@@ -30,6 +30,8 @@ const state = { range: "30", rank: "projects", data: null, contextData: null, ti
 Object.assign(translations.zh, { capacityTitle:"Codex 额度状态", tokenUsage:"Codex Token 用量", date:"日期", eventCount:"事件", costNote:"计价说明", overview:"概览", privacyCompact:"仅本地读取", overviewTitle:"使用概览", overviewSub:"用量、费用与额度。", trendsSub:"活跃时间与项目占比。", dataSub:"本地读取，可导出。", pricingTitle:"金额如何估算？", pricingScope:"仅统计 GPT / Codex；输入、缓存与输出分别计价。", pricingUnknown:"Unknown model 保留用量，但不计入金额。自动审查采用 GPT-5.3-Codex 代理估算。", unknownModel:"未识别模型", unknownModelInfo:"仅计入用量，未计价", proxyEstimate:"代理估算" });
 Object.assign(translations.en, { capacityTitle:"Codex capacity", tokenUsage:"Codex Token usage", date:"Date", eventCount:"Events", costNote:"Pricing notes", overview:"Overview", privacyCompact:"Local only", overviewTitle:"Usage at a glance", overviewSub:"Usage, cost, capacity.", trendsSub:"Activity times and project share.", dataSub:"Local, exportable, private.", pricingTitle:"How is cost estimated?", pricingScope:"Only GPT / Codex is counted; input, cache, and output are priced separately.", pricingUnknown:"Unknown models keep verified usage but no cost. Auto review uses a GPT-5.3-Codex proxy estimate.", unknownModel:"Unidentified model", unknownModelInfo:"Usage only, not priced", proxyEstimate:"Proxy estimate" });
 const $ = (selector) => document.querySelector(selector);
+Object.assign(translations.zh, { scanIncomplete:"{n} 个历史文件读取失败，统计可能不完整。", zstdUnavailable:"{n} 个压缩历史文件尚未读取，请使用 Node.js 24+。" });
+Object.assign(translations.en, { scanIncomplete:"{n} history files could not be read; totals may be incomplete.", zstdUnavailable:"{n} compressed history files need Node.js 24+ to be read." });
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const t = (key, values = {}) => String(translations[state.locale]?.[key] ?? translations.zh[key] ?? key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
 const weekdays = () => translations[state.locale].weekday;
@@ -520,7 +522,11 @@ function render(data) {
   $("#sourcePath").textContent = (data.sourceDirs || [data.sessionsDir]).join(" · ");
   $("#sourcePath").title = $("#sourcePath").textContent;
   const notice = $("#notice");
-  if (!data.fileCount) { notice.textContent = t("noFiles", { path:data.sessionsDir }); notice.classList.remove("hidden"); }
+  if (data.scanWarnings?.length) {
+    notice.textContent = data.scanWarnings.map((warning) => t(warning.code === "zstd-unavailable" ? "zstdUnavailable" : "scanIncomplete", { n:warning.count })).join(" ");
+    notice.classList.remove("hidden");
+  }
+  else if (!data.fileCount) { notice.textContent = t("noFiles", { path:data.sessionsDir }); notice.classList.remove("hidden"); }
   else notice.classList.add("hidden");
   animateVisuals();
 }
