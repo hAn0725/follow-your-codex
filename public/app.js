@@ -517,7 +517,8 @@ function render(data) {
   state.nextRefresh = Date.now() + 30_000;
   updateClock();
   $("#footerStatus").textContent = t("localFile", { time:stamp, count:data.fileCount });
-  $("#sourcePath").textContent = data.sessionsDir;
+  $("#sourcePath").textContent = (data.sourceDirs || [data.sessionsDir]).join(" · ");
+  $("#sourcePath").title = $("#sourcePath").textContent;
   const notice = $("#notice");
   if (!data.fileCount) { notice.textContent = t("noFiles", { path:data.sessionsDir }); notice.classList.remove("hidden"); }
   else notice.classList.add("hidden");

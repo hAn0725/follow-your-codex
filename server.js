@@ -220,9 +220,9 @@ function startServer(options = parseArgs(process.argv.slice(2))) {
   });
 
   server.listen(options.port, HOST, () => {
-    const url = `http://${HOST}:${options.port}`;
+    const url = `http://${HOST}:${server.address().port}`;
     console.log(`follow your codex is running at ${url}`);
-    console.log(`Reading Codex metadata from ${scanner.sessionsDir}`);
+    console.log(`Reading Codex metadata from ${scanner.sessionsDir} and ${scanner.archivedSessionsDir}`);
     console.log("Press Ctrl+C to stop.");
     if (!options.noOpen) openBrowser(url);
     if (options.desktop) scheduleExit(options.startupGraceMs ?? 120000);

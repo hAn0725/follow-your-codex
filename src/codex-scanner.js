@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { version } = require("../package.json");
 const { estimateCost, isExcludedExternalModel, resolvePrice } = require("./pricing");
 
 const TOKEN_FIELDS = ["input", "cached", "output", "reasoning", "total"];
@@ -89,6 +90,9 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
   let latestLimits = null;
   let latestLimitsAt = 0;
   const events = [];
+  const responseIds = new Set();
+  let turnId = "unknown-turn";
+  const modernTurns = new Set();
 
   for (const line of text.split(/\r?\n/)) {
     if (!line.trim()) continue;
@@ -100,18 +104,21 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
       continue;
     }
 
-    const payload = record && typeof record.payload === "object" ? record.payload : {};
+    if (!record || typeof record !== "object") continue;
+    const payload = record.payload && typeof record.payload === "object" ? record.payload : {};
     if (record.type === "session_meta") {
       if (typeof payload.id === "string" && payload.id) sessionId = payload.id;
       if (typeof payload.cwd === "string" && payload.cwd) project = safeBasename(payload.cwd);
       continue;
     }
     if (record.type === "turn_context") {
+      if (typeof payload.turn_id === "string" && payload.turn_id) turnId = payload.turn_id;
       if (typeof payload.model === "string" && payload.model) model = payload.model;
       if (typeof payload.cwd === "string" && payload.cwd) project = safeBasename(payload.cwd);
       continue;
     }
-    if (record.type !== "event_msg" || payload.type !== "token_count") continue;
+    const modernUsage = record.type === "token_usage_record";
+    if (!modernUsage && (record.type !== "event_msg" || payload.type !== "token_count")) continue;
 
     // Retain compatibility if a newer Codex log supplies the model directly
     // on the usage event rather than only in a preceding turn context record.
@@ -119,6 +126,21 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
 
     const timestamp = parseTimestamp(record.timestamp, fallbackMs);
     const info = payload.info && typeof payload.info === "object" ? payload.info : {};
+    // Modern thread totals and legacy totals can use different baselines.
+    // Prefer per-response records for each migrated turn instead of mixing them.
+    const responseId = modernUsage && typeof payload.response_id === "string" ? payload.response_id : null;
+    if (responseId && responseIds.has(responseId)) continue;
+    if (responseId) responseIds.add(responseId);
+    if (modernUsage) {
+      const usage = readUsage(payload.usage);
+      if (hasUsage(usage)) {
+        const key = payload.turn_id || turnId;
+        modernTurns.add(key);
+        events.push({ timestamp, model, project, sessionId, usage, turnId: key, modern: true,
+          ...(responseId ? { responseId } : {}) });
+      }
+      continue;
+    }
     const currentTotal = readUsage(info.total_token_usage);
     const lastUsage = readUsage(info.last_token_usage);
     let usage = null;
@@ -135,7 +157,7 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
     if (currentTotal) previousTotal = currentTotal;
 
     if (hasUsage(usage)) {
-      events.push({ timestamp, model, project, sessionId, usage });
+      events.push({ timestamp, model, project, sessionId, usage, turnId });
     }
 
     const contextWindow = Number(info.model_context_window);
@@ -165,9 +187,10 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
     }
   }
 
-  const total = events.reduce((sum, event) => addUsage(sum, event.usage), emptyUsage());
-  const updatedAt = events.reduce((latest, event) => Math.max(latest, event.timestamp), 0);
-  return { filePath, sessionId, project, model, events, total, updatedAt, latestContext, latestLimits };
+  const selectedEvents = events.filter((event) => event.modern || !modernTurns.has(event.turnId));
+  const total = selectedEvents.reduce((sum, event) => addUsage(sum, event.usage), emptyUsage());
+  const updatedAt = selectedEvents.reduce((latest, event) => Math.max(latest, event.timestamp), 0);
+  return { filePath, sessionId, project, model, events: selectedEvents, total, updatedAt, latestContext, latestLimits };
 }
 
 function discoverCodexHome(override) {
@@ -201,11 +224,12 @@ class CodexScanner {
   constructor(options = {}) {
     this.codexHome = discoverCodexHome(options.codexHome);
     this.sessionsDir = path.join(this.codexHome, "sessions");
+    this.archivedSessionsDir = path.join(this.codexHome, "archived_sessions");
     this.cache = new Map();
   }
 
   scan() {
-    const files = listJsonlFiles(this.sessionsDir);
+    const files = [...listJsonlFiles(this.sessionsDir), ...listJsonlFiles(this.archivedSessionsDir)];
     const seen = new Set(files);
     for (const filePath of files) {
       let stat;
@@ -240,12 +264,37 @@ function localDateKey(timestamp) {
 }
 
 function aggregate(parsedFiles, codexHome) {
-  const events = parsedFiles.flatMap((session) => session.events);
+  // Archive moves and copied logs must not multiply the same session.
+  const bySession = new Map();
+  for (const session of parsedFiles) {
+    if (!bySession.has(session.sessionId)) {
+      bySession.set(session.sessionId, { ...session, events: [], eventKeys: new Set() });
+    }
+    const merged = bySession.get(session.sessionId);
+    for (const event of session.events) {
+      const key = event.responseId || JSON.stringify([event.timestamp, event.model, event.usage]);
+      if (merged.eventKeys.has(key)) continue;
+      merged.eventKeys.add(key);
+      merged.events.push(event);
+    }
+    for (const field of ["latestLimits", "latestContext"]) {
+      if (session[field] && (!merged[field] || session[field].timestamp > merged[field].timestamp)) merged[field] = session[field];
+    }
+  }
+  const uniqueSessions = [...bySession.values()];
+  for (const session of uniqueSessions) {
+    const modernTurns = new Set(session.events.filter((event) => event.modern).map((event) => event.turnId));
+    session.events = session.events.filter((event) => event.modern || !modernTurns.has(event.turnId));
+    session.events.sort((a, b) => a.timestamp - b.timestamp);
+    session.total = session.events.reduce((sum, event) => addUsage(sum, event.usage), emptyUsage());
+    session.updatedAt = session.events.at(-1)?.timestamp || session.updatedAt;
+  }
+  const events = uniqueSessions.flatMap((session) => session.events);
   events.sort((a, b) => a.timestamp - b.timestamp);
 
   let latestLimits = null;
   let latestContext = null;
-  for (const session of parsedFiles) {
+  for (const session of uniqueSessions) {
     if (session.latestLimits && (!latestLimits || session.latestLimits.timestamp > latestLimits.timestamp)) {
       latestLimits = session.latestLimits;
     }
@@ -254,7 +303,7 @@ function aggregate(parsedFiles, codexHome) {
     }
   }
 
-  const sessions = parsedFiles
+  const sessions = uniqueSessions
     .filter((session) => hasUsage(session.total))
     .map((session) => ({
       id: session.sessionId,
@@ -273,6 +322,7 @@ function aggregate(parsedFiles, codexHome) {
   return {
     codexHome,
     sessionsDir: path.join(codexHome, "sessions"),
+    sourceDirs: [path.join(codexHome, "sessions"), path.join(codexHome, "archived_sessions")],
     scannedAt: Date.now(),
     fileCount: parsedFiles.length,
     events,
@@ -346,9 +396,14 @@ function buildView(snapshot, range = "30", now = new Date()) {
     .map(([name, usage]) => ({ name, usage }))
     .sort((a, b) => b.usage.total - a.usage.total);
 
+  const eventsBySession = new Map();
+  for (const event of selected) {
+    if (!eventsBySession.has(event.sessionId)) eventsBySession.set(event.sessionId, []);
+    eventsBySession.get(event.sessionId).push(event);
+  }
   const selectedSessions = snapshot.sessions
     .map((session) => {
-      const sessionEvents = selected.filter((event) => event.sessionId === session.id);
+      const sessionEvents = eventsBySession.get(session.id) || [];
       const usage = sessionEvents.reduce((sum, event) => addUsage(sum, event.usage), emptyUsage());
       return {
         ...session,
@@ -382,7 +437,7 @@ function buildView(snapshot, range = "30", now = new Date()) {
     const previousStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - numericDays * 2 + 1).getTime();
     const previousEnd = start;
     const previousTotal = snapshot.events
-      .filter((event) => event.timestamp >= previousStart && event.timestamp < previousEnd)
+      .filter((event) => event.timestamp >= previousStart && event.timestamp < previousEnd && !isExcludedExternalModel(event.model))
       .reduce((sum, event) => sum + event.usage.total, 0);
     comparison = {
       previousTotal,
@@ -435,10 +490,11 @@ function buildView(snapshot, range = "30", now = new Date()) {
   });
 
   return {
-    app: { name: "follow your codex", version: "0.4.0" },
+    app: { name: "follow your codex", version },
     range,
     codexHome: snapshot.codexHome,
     sessionsDir: snapshot.sessionsDir,
+    sourceDirs: snapshot.sourceDirs,
     scannedAt: snapshot.scannedAt,
     fileCount: snapshot.fileCount,
     eventCount: selected.length,

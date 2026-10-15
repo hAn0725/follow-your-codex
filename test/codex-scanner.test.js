@@ -2,11 +2,64 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { aggregate, buildView, parseSessionText, readUsage, usageDelta } = require("../src/codex-scanner");
+const { aggregate, buildView, CodexScanner, parseSessionText, readUsage, usageDelta } = require("../src/codex-scanner");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 
 function jsonl(records) {
   return records.map((record) => JSON.stringify(record)).join("\n");
 }
+
+test("migrated usage records replace legacy mirrors with different cumulative baselines", () => {
+  const usage = { input_tokens: 100, cached_input_tokens: 40, output_tokens: 20, total_tokens: 120 };
+  const modern = { type: "token_usage_record", timestamp: "2026-10-14T12:00:00Z", payload: {
+    turn_id: "new-turn", response_id: "response-1", usage,
+    thread_token_usage: { input_tokens: 10000, output_tokens: 2000, total_tokens: 12000 },
+  } };
+  const parsed = parseSessionText(jsonl([
+    null,
+    { type: "turn_context", payload: { turn_id: "old-turn", model: "gpt-6.1-sol" } },
+    { type: "event_msg", payload: { type: "token_count", info: { last_token_usage: usage } } },
+    { type: "turn_context", payload: { turn_id: "new-turn", model: "gpt-6.1-sol" } },
+    modern,
+    { type: "event_msg", payload: { type: "token_count", info: { last_token_usage: usage, total_token_usage: usage } } },
+    modern,
+  ]));
+  assert.equal(parsed.events.length, 2);
+  assert.equal(parsed.total.total, 240);
+  assert.equal(parsed.total.cached, 80);
+});
+
+test("scanner includes archives, deduplicates copies, and retains disjoint session segments", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-tracer-test-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, "sessions"));
+  fs.mkdirSync(path.join(root, "archived_sessions"));
+  const makeLog = (responseId, total) => jsonl([
+    { type: "session_meta", payload: { id: "same-session" } },
+    { type: "turn_context", payload: { turn_id: "turn-1", model: "gpt-6.1-sol" } },
+    { type: "token_usage_record", timestamp: "2026-10-14T12:00:00Z", payload: {
+      response_id: responseId, usage: { input_tokens: total, total_tokens: total },
+    } },
+  ]);
+  const active = path.join(root, "sessions", "active.jsonl");
+  fs.writeFileSync(active, makeLog("response-a", 100));
+  fs.writeFileSync(path.join(root, "archived_sessions", "copy.jsonl"), makeLog("response-a", 100));
+  fs.writeFileSync(path.join(root, "archived_sessions", "segment.jsonl"), makeLog("response-b", 200));
+  const scanner = new CodexScanner({ codexHome: root });
+  const check = () => {
+    const view = buildView(scanner.scan(), "all", new Date("2026-10-15T12:00:00Z"));
+    assert.equal(view.totals.total, 300);
+    assert.equal(view.eventCount, 2);
+    assert.equal(view.sessionCount, 1);
+    assert.equal(view.sourceDirs.length, 2);
+  };
+  check();
+  check(); // Cached scans preserve the same accounting.
+  fs.unlinkSync(active);
+  check(); // Moving an active log to archive cannot lose history.
+});
 
 test("repeated cumulative snapshots do not inflate usage or estimated cost", () => {
   const record = { type: "event_msg", payload: { type: "token_count", info: {
