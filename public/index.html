@@ -95,12 +95,11 @@
 
         <section id="trends" class="section-anchor content-section" aria-labelledby="trends-title">
           <div class="section-title-row"><div><p class="eyebrow">PATTERN ANALYSIS</p><h2 id="trends-title">趋势分析</h2></div><p>找出最常使用 Codex 的星期与时段</p></div>
-          <div class="analysis-grid">
-            <article class="panel heat-panel"><div class="section-heading"><div><h3>活跃热力图</h3><p id="heatHint">颜色越深，Token 消耗越高</p></div><span id="heatPeak" class="status-pill">本地时间</span></div><div id="heatmap" class="heatmap-wrap"></div></article>
-            <div class="project-comparison">
-              <article class="panel ranking-panel"><div class="section-heading"><div><h3>项目消耗排行 · TOP 10</h3><p>从高到低排列 · 占比以全部项目为基数</p></div></div><div id="projectRanking" class="ranking"></div></article>
-              <article class="panel project-pie-panel"><div class="section-heading"><div><h3>项目消耗占比</h3><p>前十名分别展示，其余合并为“其他”</p></div></div><div id="projectPie"></div><div id="projectPieLegend"></div></article>
-            </div>
+          <div class="analysis-grid activity-layout">
+            <article class="panel heat-panel"><div class="section-heading"><div><h3>活跃热力图</h3><p id="heatHint">颜色越深，Token 消耗越高</p></div><span id="heatPeak" class="status-pill">本地时间</span></div><div id="heatmap" class="heatmap-wrap"></div>
+              <section class="hourly-section" aria-labelledby="hourly-title"><div class="hourly-heading"><div><h3 id="hourly-title" data-i18n="hourlyTitle">24 小时用量分布</h3><p id="hourlyHint">所选周期 · 按本地小时汇总</p></div><span id="hourlyPeak"></span></div><div id="hourlyChart"></div><div class="hourly-axis" aria-hidden="true"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div></section>
+            </article>
+            <article class="panel project-pie-panel"><div class="section-heading"><div><h3>项目消耗占比</h3><p>前十名分别展示，其余合并为“其他”</p></div></div><div id="projectPie"></div><div id="projectPieLegend"></div></article>
           </div>
           <div class="analysis-grid extra-analysis">
             <article class="panel"><div class="section-heading"><div><h3>每日缓存命中率</h3><p id="cacheHint">缓存输入 ÷ 全部输入 · 无输入的日期留空</p></div></div><div id="cacheTrend" class="trend-chart"></div></article>
