@@ -81,7 +81,7 @@ test("CSV export is UTF-8 BOM encoded and safely quotes project names", () => {
 
 test("Markdown export includes daily and project sections", () => {
   const markdown = buildMarkdown(view);
-  assert.match(markdown, /# follow your codex 用量报告/);
+  assert.match(markdown, /# Codex Meter 用量报告/);
   assert.match(markdown, /\| 2026-09-08 \| 120 \|/);
   assert.match(markdown, /\| alpha, beta \| 120 \|/);
 });

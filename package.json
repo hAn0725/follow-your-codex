@@ -1,6 +1,6 @@
 {
-  "name": "follow-your-codex",
-  "version": "0.5.1",
+  "name": "codex-meter",
+  "version": "0.6.0",
   "private": true,
   "description": "A lightweight, local-only Codex token usage dashboard.",
   "license": "MIT",

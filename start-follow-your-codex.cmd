@@ -1,12 +1,3 @@
 @echo off
-setlocal
-cd /d "%~dp0"
-where node >nul 2>nul
-if errorlevel 1 (
-  echo Node.js 24 or newer is required.
-  echo Download it from https://nodejs.org/
-  pause
-  exit /b 1
-)
-node server.js
-if errorlevel 1 pause
+rem Compatibility entry point for existing shortcuts and scripts.
+call "%~dp0start-codex-meter.cmd" %*

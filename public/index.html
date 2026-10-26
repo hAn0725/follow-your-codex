@@ -1,100 +1,79 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
-    <title>follow your codex</title>
+    <title>Codex Meter</title>
+    <meta name="description" content="A clear view of your local Codex token usage, estimated cost, and capacity." />
+    <link rel="icon" type="image/svg+xml" href="/mark.svg" />
+    <script src="/preferences.js"></script>
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <div class="background-scene" aria-hidden="true">
-      <svg class="codex-knot" viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="knotStroke" x1="210" y1="180" x2="780" y2="824" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#F4F6F7"/>
-            <stop offset=".5" stop-color="#A9B0B5"/>
-            <stop offset="1" stop-color="#D7DBDE"/>
-          </linearGradient>
-          <filter id="knotBloom" x="-18%" y="-18%" width="136%" height="136%">
-            <feGaussianBlur stdDeviation="13"/>
-          </filter>
-        </defs>
-        <g class="knot-bloom" filter="url(#knotBloom)">
-          <rect x="415" y="168" width="170" height="664" rx="85" transform="rotate(0 500 500)"/>
-          <rect x="415" y="168" width="170" height="664" rx="85" transform="rotate(60 500 500)"/>
-          <rect x="415" y="168" width="170" height="664" rx="85" transform="rotate(120 500 500)"/>
-        </g>
-        <g class="knot-ribbon" stroke="url(#knotStroke)" stroke-width="45">
-          <rect x="415" y="168" width="170" height="664" rx="85" transform="rotate(0 500 500)"/>
-          <rect x="415" y="168" width="170" height="664" rx="85" transform="rotate(60 500 500)"/>
-          <rect x="415" y="168" width="170" height="664" rx="85" transform="rotate(120 500 500)"/>
-        </g>
-        <circle class="knot-core" cx="500" cy="500" r="115"/>
-      </svg>
-    </div>
+  <body class="is-loading">
+    <a class="skip-link" href="#overview">跳到内容 / Skip to content</a>
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="brand"><div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div><div><strong>follow your codex</strong><span data-i18n="brandSubtitle">本地 Token 追踪器</span></div></div>
+        <div class="brand"><div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div><div><strong>Codex Meter</strong><span data-i18n="brandSubtitle">用量，每一刻。</span></div></div>
         <nav aria-label="主导航" data-i18n-aria="mainNav">
           <i class="nav-indicator" aria-hidden="true"></i>
           <button class="active" data-target="overview"><span>⌂</span><b data-i18n="navOverview">控制中心</b></button>
           <button data-target="trends"><span>↗</span><b data-i18n="navTrends">趋势分析</b></button>
           <button data-target="data-source"><span>◎</span><b data-i18n="navData">数据与导出</b></button>
         </nav>
-        <div class="sidebar-foot"><p class="privacy-compact" data-i18n="privacyCompact">仅本地读取</p><div class="side-preferences" aria-label="界面偏好" data-i18n-aria="viewPreferences"><button id="themeToggle" class="quiet-button" type="button" aria-pressed="true"><span aria-hidden="true">◐</span><b data-i18n="themeDark">深色</b></button><button id="localeToggle" class="quiet-button locale-button" type="button" aria-pressed="false">EN</button></div></div>
+        <div class="sidebar-foot"><a class="classic-link" href="/classic/index.html"><span data-i18n="classicVersion">经典版</span><span aria-hidden="true">↗</span></a><div class="app-version"><span id="appVersion">v0.6.0</span><span>Codex Meter</span></div><p class="privacy-compact" data-i18n="privacyCompact">仅本地读取</p><div class="side-preferences" aria-label="界面偏好" data-i18n-aria="viewPreferences"><button id="themeToggle" class="quiet-button" type="button" aria-pressed="true"><span aria-hidden="true">◐</span><b data-i18n="themeDark">深色</b></button><button id="localeToggle" class="quiet-button locale-button" type="button" aria-pressed="false">EN</button></div></div>
       </aside>
 
       <main class="workspace">
         <header class="topbar">
-          <div><p class="eyebrow">CODEX COMMAND CENTER</p><h1 data-i18n="pageTitle">Codex 使用中心</h1><p id="headerStatus" class="subtitle">正在读取本地记录…</p></div>
+          <div><h1 data-i18n="pageTitle">用量工作台</h1><p id="headerStatus" class="subtitle">正在读取本地记录…</p></div>
           <div class="top-actions">
             <div id="rangeSwitch" class="range-switch" role="group" aria-label="统计范围" data-i18n-aria="rangeLabel"><input id="rangeSlider" type="range" min="0" max="3" step="1" value="2" aria-label="统计范围" /><div class="range-track" aria-hidden="true"><i></i></div><div class="range-labels" aria-hidden="true"><span data-range-value="0" data-i18n="range1">1 天</span><span data-range-value="1" data-i18n="range7">7 天</span><span data-range-value="2" data-i18n="range30">30 天</span><span data-range-value="3" data-i18n="rangeAll">全部</span></div></div>
-            <button id="refresh" class="primary-button" type="button"><span>↻</span><b data-i18n="sync">同步数据</b></button>
+            <button id="refresh" class="primary-button" type="button"><span>↻</span><b data-i18n="sync">同步数据</b></button><details id="headerExport" class="export-menu"><summary aria-label="导出" data-i18n-aria="exportShort"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></svg><span data-i18n="exportShort">导出</span></summary><div class="export-options"><a data-export="csv" href="/api/export?range=30&amp;format=csv">CSV <small data-i18n="exportSpreadsheet">表格</small></a><a data-export="md" href="/api/export?range=30&amp;format=md">Markdown <small data-i18n="exportDocument">文档</small></a><a data-export="json" href="/api/export?range=30&amp;format=json">JSON <small data-i18n="exportData">数据</small></a></div></details>
           </div>
         </header>
 
         <div id="notice" class="notice hidden" role="status"></div>
 
         <section id="overview" class="section-anchor" aria-labelledby="overview-title">
-          <div class="overview-heading"><div><p class="eyebrow">YOUR CODEX, AT A GLANCE</p><h2 id="overview-title" data-i18n="overviewTitle">使用概览</h2><p data-i18n="overviewSub">用量、费用与额度。</p></div><span class="status-pill" data-i18n="localUsage">● 本机用量</span></div>
+          <div class="overview-heading"><div><h2 id="overview-title" data-i18n="overviewTitle">使用概览</h2><p data-i18n="overviewSub">用量、费用与额度。</p></div><span class="status-pill" data-i18n="localUsage">● 本机用量</span></div>
           <div class="hero-grid">
           <article class="panel usage-hero">
-            <div class="section-heading"><div><p class="eyebrow">OVERVIEW</p><h2>Codex Token Usage</h2></div><span id="rangeLabel" class="status-pill">最近 30 天</span></div>
+            <div class="section-heading"><div><h2>Token 用量</h2></div><span id="rangeLabel" class="status-pill">最近 30 天</span></div>
             <p class="hero-label">累计 Token 使用量</p>
             <div class="hero-number"><strong id="totalTokens">—</strong><span>tokens</span></div>
-            <div class="cost-line"><span>≈</span><strong id="estimatedCost">—</strong><span>USD · GPT API 等值花费</span></div>
+            <div class="cost-line"><span>≈</span><strong id="estimatedCost">—</strong><span>API 等值费用</span></div>
             <p id="costCoverage" class="cost-coverage">正在计算模型用量</p>
             <div class="hero-breakdown"><span id="totalFoot">—</span><a href="#pricing-note">计价说明 ↗</a></div>
           </article>
           <article class="panel quota-hero">
-            <div class="section-heading"><div><p class="eyebrow">CAPACITY</p><h2>Codex 额度状态</h2></div><span id="limitAge" class="status-pill">等待数据</span></div>
+            <div class="section-heading"><div><h2>Codex 额度状态</h2></div><span id="limitAge" class="status-pill">等待数据</span></div>
             <div id="limits" class="quota-grid"></div><div id="context" class="context-strip"></div>
           </article>
           </div>
 
           <div class="metrics-grid" aria-label="用量摘要">
-            <article class="metric-card today-card"><span>今日消耗 <i>↗</i></span><strong id="todayTokens">—</strong><small id="todayFoot">本地时区</small><div id="miniBars" class="mini-bars" aria-label="最近七天用量"></div></article>
+            <article class="metric-card today-card"><span>今日消耗</span><strong id="todayTokens">—</strong><small id="todayFoot">本地时区</small><div id="miniBars" class="mini-bars" aria-label="最近七天用量"></div></article>
             <article class="metric-card"><span>日均消耗</span><strong id="averageTokens">—</strong><small id="comparison">对比上个周期</small></article>
-            <article class="metric-card"><span>缓存命中</span><strong id="cacheRate">—</strong><small>缓存输入 / 输入</small></article>
+            <article class="metric-card"><span>缓存命中</span><strong id="cacheRate">—</strong><small data-i18n="cacheFraction">缓存输入 / 输入</small></article>
             <article class="metric-card"><span>活跃天数</span><strong id="activeDays">—</strong><small id="streak">连续活跃 — 天</small></article>
           </div>
 
           <div class="dashboard-grid">
-            <article class="panel trend-panel"><div class="section-heading"><div><p class="eyebrow">USAGE OVER TIME</p><h2>Token 使用趋势</h2></div><div class="legend" aria-label="图例"><span><i class="key input"></i>每日总量</span><span id="trendHint">悬停查看明细</span></div></div><div id="trendChart" class="trend-chart" aria-label="每日 Token 平滑曲线图"></div></article>
-            <article class="panel mix-panel"><div class="section-heading"><div><p class="eyebrow">TOKEN MIX</p><h2>Token 构成</h2></div></div><div class="mix-body"><div id="donut" class="donut" role="img" aria-label="Token 构成图"><div><strong id="donutTotal">—</strong><span>总计</span></div></div><div id="mixLegend" class="mix-legend"></div></div></article>
+            <article class="panel trend-panel"><div class="section-heading"><div><h2>Token 使用趋势</h2></div><div class="legend" aria-label="图例"><span><i class="key input"></i>每日总量</span><span id="trendHint">悬停查看明细</span></div></div><div id="trendChart" class="trend-chart" aria-label="每日 Token 平滑曲线图"></div></article>
+            <article class="panel mix-panel"><div class="section-heading"><div><h2>Token 构成</h2></div></div><div class="mix-body"><div id="donut" class="donut" role="img" aria-label="Token 构成图"><div><strong id="donutTotal">—</strong><span>总计</span></div></div><div id="mixLegend" class="mix-legend"></div></div></article>
           </div>
 
           <div class="insight-grid" aria-label="智能摘要">
-            <article><span>高峰日期</span><strong id="peakDay">—</strong><small id="peakDayValue">暂无记录</small></article>
-            <article><span>活跃时段</span><strong id="busyHour">—</strong><small id="busyWeekday">按本地时间统计</small></article>
-            <article><span>近 7 日日均</span><strong id="recentAverage">—</strong><small>滚动窗口</small></article>
-            <article><span>30 日趋势预测</span><strong id="projection">—</strong><small>按近 7 日日均推算</small></article>
+            <article><span data-i18n="peakDay">高峰日期</span><strong id="peakDay">—</strong><small id="peakDayValue">暂无记录</small></article>
+            <article><span data-i18n="busyHour">活跃时段</span><strong id="busyHour">—</strong><small id="busyWeekday">按本地时间统计</small></article>
+            <article><span data-i18n="recentAverage">近 7 日日均</span><strong id="recentAverage">—</strong><small data-i18n="rolling">滚动窗口</small></article>
+            <article><span data-i18n="projection">30 日用量预估</span><strong id="projection">—</strong><small data-i18n="projectByRecent">按近 7 日日均推算</small></article>
           </div>
         </section>
 
         <section id="trends" class="section-anchor content-section" aria-labelledby="trends-title">
-          <div class="section-title-row"><div><p class="eyebrow">PATTERN ANALYSIS</p><h2 id="trends-title">趋势分析</h2></div><p>找出最常使用 Codex 的星期与时段</p></div>
+          <div class="section-title-row"><div><h2 id="trends-title">趋势分析</h2></div><p>找出最常使用 Codex 的星期与时段</p></div>
           <div class="analysis-grid activity-layout">
             <article class="panel heat-panel"><div class="section-heading"><div><h3>活跃热力图</h3><p id="heatHint">颜色越深，Token 消耗越高</p></div><span id="heatPeak" class="status-pill">本地时间</span></div><div id="heatmap" class="heatmap-wrap"></div>
               <section class="hourly-section" aria-labelledby="hourly-title"><div class="hourly-heading"><div><h3 id="hourly-title" data-i18n="hourlyTitle">24 小时用量分布</h3><p id="hourlyHint">所选周期 · 按本地小时汇总</p></div><span id="hourlyPeak"></span></div><div id="hourlyChart"></div><div class="hourly-axis" aria-hidden="true"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div></section>
@@ -112,12 +91,13 @@
 
         <section id="data-source" class="section-anchor content-section" aria-labelledby="data-title">
           <article id="pricing-note" class="panel pricing-note"><h3>金额如何估算？</h3><p>仅统计 GPT / Codex；输入、缓存与输出分别计价。</p><p>Unknown model 保留用量，但不计入金额。自动审查采用 GPT-5.3-Codex 代理估算。</p><p id="costParts">—</p><p class="pricing-links"><a href="https://developers.openai.com/api/docs/pricing" target="_blank" rel="noreferrer">OpenAI 定价</a></p></article>
-          <div class="section-title-row"><div><p class="eyebrow">LOCAL DATA</p><h2 id="data-title">数据与导出</h2></div><p>可验证、可带走、不上传</p></div>
+          <div class="section-title-row"><div><h2 id="data-title">数据与导出</h2></div><p>可验证、可带走、不上传</p></div>
           <div class="data-grid"><article class="panel source-card"><span class="source-icon">◎</span><div><h3>本机 Codex 会话元数据</h3><p id="sourcePath">—</p><small id="footerStatus">等待扫描</small></div></article><article class="panel export-card"><div><h3>导出当前范围</h3><p>CSV 适合表格分析，Markdown 适合归档，JSON 保留完整结构。</p></div><div class="export-actions"><a id="exportCsv" href="#">CSV</a><a id="exportMd" href="#">Markdown</a><a id="exportJson" href="#">JSON</a></div></article></div>
         </section>
       </main>
     </div>
     <div id="tooltip" class="tooltip hidden" role="tooltip"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="/app.js"></script>
   </body>
 </html>

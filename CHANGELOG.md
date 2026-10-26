@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 — 2026-10-26
+
+- Rename the app, local package, reports, and exported downloads to Codex Meter.
+- Refresh the main dashboard while retaining the classic interface at `/classic/index.html` and the complete `baseline-0.5.1-20261026` Git tag.
+- Preserve all existing accounting, pricing, historical-log decoding, and export behavior.
+- Verify local CLI 0.159.2 and observed desktop logs up to 0.164.0-alpha.11.1 without changing the parsing or pricing rules.
+- Add `start-codex-meter.cmd`; keep the previous command entry point and old desktop shortcut compatible.
+- Make desktop shortcut installation idempotent and use a neutral monochrome token-meter icon.
+
 ## 0.5.1 — 2026-10-15
 
 - Restore historical usage from `.jsonl.zst` files created by Codex history compression, in both active and archived session trees.

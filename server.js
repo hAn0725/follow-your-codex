@@ -41,7 +41,7 @@ function buildCsv(view) {
 
 function buildMarkdown(view) {
   const lines = [
-    "# follow your codex 用量报告",
+    "# Codex Meter 用量报告",
     "",
     `- 统计范围：${view.range === "all" ? "全部" : `${view.range} 天`}`,
     `- 总 Token：${Math.round(view.totals.total).toLocaleString("zh-CN")}`,
@@ -191,11 +191,11 @@ function startServer(options = parseArgs(process.argv.slice(2))) {
         const view = buildView(await getSnapshot(), range);
         const stamp = new Date().toISOString().slice(0, 10);
         if (format === "json") {
-          sendDownload(response, MIME_TYPES[".json"], `follow-your-codex-${stamp}.json`, JSON.stringify(view, null, 2));
+          sendDownload(response, MIME_TYPES[".json"], `codex-meter-${stamp}.json`, JSON.stringify(view, null, 2));
         } else if (format === "md") {
-          sendDownload(response, "text/markdown; charset=utf-8", `follow-your-codex-${stamp}.md`, buildMarkdown(view));
+          sendDownload(response, "text/markdown; charset=utf-8", `codex-meter-${stamp}.md`, buildMarkdown(view));
         } else {
-          sendDownload(response, "text/csv; charset=utf-8", `follow-your-codex-${stamp}.csv`, buildCsv(view));
+          sendDownload(response, "text/csv; charset=utf-8", `codex-meter-${stamp}.csv`, buildCsv(view));
         }
       } catch (error) {
         sendJson(response, 500, { error: error.message });
@@ -221,7 +221,7 @@ function startServer(options = parseArgs(process.argv.slice(2))) {
 
   server.listen(options.port, HOST, () => {
     const url = `http://${HOST}:${server.address().port}`;
-    console.log(`follow your codex is running at ${url}`);
+    console.log(`Codex Meter is running at ${url}`);
     console.log(`Reading Codex metadata from ${scanner.sessionsDir} and ${scanner.archivedSessionsDir}`);
     console.log("Press Ctrl+C to stop.");
     if (!options.noOpen) openBrowser(url);

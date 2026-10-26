@@ -506,7 +506,7 @@ function buildView(snapshot, range = "30", now = new Date()) {
   });
 
   return {
-    app: { name: "follow your codex", version },
+    app: { name: "Codex Meter", version },
     range,
     codexHome: snapshot.codexHome,
     sessionsDir: snapshot.sessionsDir,

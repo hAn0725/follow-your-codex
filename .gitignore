@@ -7,3 +7,6 @@ coverage/
 follow-your-codex-*.csv
 follow-your-codex-*.json
 follow-your-codex-*.md
+codex-meter-*.csv
+codex-meter-*.json
+codex-meter-*.md

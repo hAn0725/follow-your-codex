@@ -26,10 +26,15 @@ const translations = {
     providerTitle:"Provider billing", providerSub:"Costs, currencies, and GPT usage stay separate. Currencies are never combined.", separateBilling:"Separate cost", token:"Token", modelUsage:"No priced models detected", trendTitle:"Token trend", dailyTotal:"Daily total", hoverDetail:"Hover for detail", tokenMix:"Token mix", total:"Total", uncachedInput:"Uncached input", cachedInput:"Cached input", reasoningOutput:"of which: reasoning output", trendsTitle:"Trend analysis", trendsSub:"Find your most-used days and hours", heatTitle:"Activity heatmap", heatHint:"Darker cells mean more Token usage", projectPie:"Project share", projectPieSub:"Top ten shown separately; the rest are grouped", cacheTrend:"Daily cache hit rate", cacheHint:"Cached input ÷ all input · days without input are blank", ioTitle:"Input and output", ioSub:"Selected range · cache is part of input, reasoning is part of output", cumulative:"Cumulative usage", cumulativeHint:"Cumulative by day in this range · hover for values", weekly:"Weekly usage", localAggregate:"Aggregated in local time", efficiency:"Model cache efficiency", efficiencySub:"Cache hit rate, cached volume, and separately estimated cost per model", daily:"Daily detail", dailySub:"Input, cache, output, and usage events", dataTitle:"Data & export", dataSub:"Verifiable, portable, never uploaded", pricingTitle:"How is the estimated cost calculated?", exportTitle:"Export this range", exportSub:"CSV for analysis, Markdown for archives, JSON for the full structure.", sourceTitle:"Local Codex session metadata", sourceEmpty:"Waiting to scan", localEstimate:"Local estimate", other:"Other", noUsage:"No usage in this range", noRank:"No ranking data in this range", noProject:"No project usage in this range", noInput:"No input usage in this range", noModel:"No model usage", recentActive:"Latest {n} active days", noDaily:"No daily usage records in this range", activeDay:"Active days", dailyUsage:"Daily average", cacheReuse:"Cache reuse", noOutput:"No output", inputOutput:"Input / output {n} : 1", everyOutput:"Every output Token corresponds to {n} input Token", priceUnavailable:"No public API price", localFile:"Refreshed {time} · {count} local session files", refreshFailed:"Read failed: {message}", noFiles:"No Codex session records found in {path}. You can also use --codex-home to choose another directory.", autoRefresh:"Last sync {time} · refreshes in {seconds}s", recentReference:"Recent 7-day reference · ", tooltipTotal:"Total", events:"{n} events", cacheRate:"Cache hit rate", all:"All", weekday:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
   }
 };
-const state = { range: "30", data: null, contextData: null, timer: null, resizeTimer: null, requestId: 0, nextRefresh: 0, locale: localStorage.getItem("follow-your-codex:locale") || "zh", theme: localStorage.getItem("follow-your-codex:theme") || "dark", motion: false };
+const state = { range:"30", data:null, contextData:null, timer:null, resizeTimer:null, requestId:0, nextRefresh:0, locale:document.documentElement.lang === "en" ? "en" : "zh", theme:document.documentElement.dataset.theme || "light", motion:false };
 Object.assign(translations.zh, { capacityTitle:"Codex 额度状态", tokenUsage:"Codex Token 用量", date:"日期", eventCount:"事件", costNote:"计价说明", overview:"概览", privacyCompact:"仅本地读取", overviewTitle:"使用概览", overviewSub:"用量、费用与额度。", trendsSub:"活跃时间与项目占比。", dataSub:"本地读取，可导出。", pricingTitle:"金额如何估算？", pricingScope:"仅统计 GPT / Codex；输入、缓存与输出分别计价。", pricingUnknown:"Unknown model 保留用量，但不计入金额。自动审查采用 GPT-5.3-Codex 代理估算。", unknownModel:"未识别模型", unknownModelInfo:"仅计入用量，未计价", proxyEstimate:"代理估算" });
 Object.assign(translations.en, { capacityTitle:"Codex capacity", tokenUsage:"Codex Token usage", date:"Date", eventCount:"Events", costNote:"Pricing notes", overview:"Overview", privacyCompact:"Local only", overviewTitle:"Usage at a glance", overviewSub:"Usage, cost, capacity.", trendsSub:"Activity times and project share.", dataSub:"Local, exportable, private.", pricingTitle:"How is cost estimated?", pricingScope:"Only GPT / Codex is counted; input, cache, and output are priced separately.", pricingUnknown:"Unknown models keep verified usage but no cost. Auto review uses a GPT-5.3-Codex proxy estimate.", unknownModel:"Unidentified model", unknownModelInfo:"Usage only, not priced", proxyEstimate:"Proxy estimate" });
+Object.assign(translations.zh, { brandSubtitle:"本地用量工作台", pageTitle:"用量工作台", tokenUsage:"Token 用量", overviewTitle:"使用概览", overviewSub:"了解每一份用量的去向。", capacityTitle:"Codex 额度", localUsage:"本地记录", gptPriced:"已估算 {n} Token", apiValue:"API 等值费用", sync:"同步", classicVersion:"经典版", exportShort:"导出", exportSpreadsheet:"表格", exportDocument:"文档", exportData:"数据", syncSuccess:"用量已更新", exportStarted:"正在准备导出", themeChanged:"已切换为{theme}模式", localeChanged:"已切换为中文", projection:"30 日用量预估", noComparison:"无上一周期数据", pricingTitle:"计价说明" });
+Object.assign(translations.en, { brandSubtitle:"Local usage workspace", pageTitle:"Usage workspace", tokenUsage:"Token usage", overviewTitle:"Overview", overviewSub:"A clear view of where your usage goes.", capacityTitle:"Codex capacity", localUsage:"Local records", gptPriced:"{n} tokens estimated", apiValue:"API equivalent", sync:"Sync", classicVersion:"Classic view", exportShort:"Export", exportSpreadsheet:"Spreadsheet", exportDocument:"Document", exportData:"Data", syncSuccess:"Usage updated", exportStarted:"Preparing export", themeChanged:"Switched to {theme} mode", localeChanged:"Switched to English", projection:"30-day projection", noComparison:"No prior period data", pricingTitle:"Pricing notes" });
+
 const $ = (selector) => document.querySelector(selector);
+Object.assign(translations.zh, { cacheFraction:"缓存输入 / 输入" });
+Object.assign(translations.en, { brandSubtitle:"Local analytics", cacheFraction:"Cached input / input" });
 Object.assign(translations.zh, { hourlyTitle:"24 小时用量分布", hourlyHint:"所选周期 · 按本地小时汇总", hourlyPeak:"高峰 {hour} · {share}%", hourlyShare:"占用量 {share}%" });
 Object.assign(translations.en, { hourlyTitle:"Usage by hour", hourlyHint:"Selected range · local hours", hourlyPeak:"Peak {hour} · {share}%", hourlyShare:"{share}% of usage" });
 Object.assign(translations.zh, { scanIncomplete:"{n} 个历史文件读取失败，统计可能不完整。", zstdUnavailable:"{n} 个压缩历史文件尚未读取，请使用 Node.js 24+。" });
@@ -156,8 +161,11 @@ function showTooltip(event, html) {
   tooltip.classList.remove("hidden");
 }
 function hideTooltip() { $("#tooltip").classList.add("hidden"); }
+const countFrames = new WeakMap();
 function setCount(selector, value, formatter = formatNumber) {
   const node = $(selector); const previous = Number(node.dataset.value ?? value); const next = Number(value) || 0;
+  if (countFrames.has(node)) cancelAnimationFrame(countFrames.get(node));
+  countFrames.delete(node);
   node.dataset.value = String(next);
   if (!state.motion || window.matchMedia("(prefers-reduced-motion: reduce)").matches || previous === next) { node.textContent = formatter(next); return; }
   const started = performance.now(); const duration = 430;
@@ -165,15 +173,22 @@ function setCount(selector, value, formatter = formatNumber) {
     const progress = Math.min(1, (now - started) / duration);
     const eased = 1 - Math.pow(1 - progress, 4);
     node.textContent = formatter(previous + (next - previous) * eased);
-    if (progress < 1) requestAnimationFrame(tick);
+    if (progress < 1) countFrames.set(node, requestAnimationFrame(tick));
+    else countFrames.delete(node);
   };
-  requestAnimationFrame(tick);
+  countFrames.set(node, requestAnimationFrame(tick));
 }
 function animateVisuals() {
   if (!state.motion || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  $$("#trendChart svg, #cacheTrend svg, #cumulativeChart svg, #weeklyPattern svg, #projectPie svg").forEach((svg, index) => svg.animate([{ opacity:.18, transform:"translateY(7px)" }, { opacity:1, transform:"translateY(0)" }], { duration:360, delay:index * 35, easing:"cubic-bezier(.2,.8,.2,1)", fill:"both" }));
-  $$(".stack-input,.stack-cache,.stack-output,.weekday-bar rect,#cacheTrend rect,.hourly-fill").forEach((bar, index) => bar.animate([{ transform:"scaleY(.04)", transformOrigin:"bottom" }, { transform:"scaleY(1)", transformOrigin:"bottom" }], { duration:420, delay:Math.min(index * 15, 260), easing:"cubic-bezier(.2,.8,.2,1)", fill:"both" }));
-  $("#donut").animate([{ opacity:.2, transform:"scale(.86)" }, { opacity:1, transform:"scale(1)" }], { duration:420, easing:"cubic-bezier(.2,.8,.2,1)", fill:"both" });
+  $$("#trendChart svg, #cacheTrend svg, #cumulativeChart svg, #weeklyPattern svg, #projectPie svg").forEach((svg) => svg.animate([{ opacity:.35 }, { opacity:1 }], { duration:220, easing:"ease-out" }));
+}
+let toastTimer;
+function showToast(message) {
+  const toast = $("#toast");
+  clearTimeout(toastTimer);
+  toast.textContent = message;
+  toast.classList.add("is-visible");
+  toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2600);
 }
 
 function renderSummary(data) {
@@ -407,6 +422,7 @@ function renderDaily(data) {
 }
 
 function updateExports() {
+  $$("[data-export]").forEach((link) => { link.href = `/api/export?range=${encodeURIComponent(state.range)}&format=${link.dataset.export}`; });
   const base = `/api/export?range=${encodeURIComponent(state.range)}`;
   $("#exportCsv").href = `${base}&format=csv`;
   $("#exportMd").href = `${base}&format=md`;
@@ -470,7 +486,6 @@ function renderExtraAnalysis(data, timelineData = data) {
 }
 
 const headerElement = $(".topbar");
-function measureHeader() {}
 document.fonts.ready.then(scheduleScrollUpdate);
 // Use the sticky header's real lower edge as the reading line.
 let scrollFrame = 0;
@@ -487,7 +502,7 @@ function setActiveNavigation(target) {
   });
   const indicator = $(".nav-indicator");
   if (indicator && activeButton) {
-    if (window.matchMedia("(max-width: 860px)").matches) {
+    if (window.matchMedia("(max-width: 640px)").matches) {
       indicator.style.setProperty("--nav-x", `${activeButton.offsetLeft}px`);
       indicator.style.setProperty("--nav-width", `${activeButton.offsetWidth}px`);
     } else indicator.style.setProperty("--nav-y", `${activeButton.offsetTop}px`);
@@ -521,6 +536,9 @@ window.addEventListener("scroll", scheduleScrollUpdate, { passive: true });
 new ResizeObserver(scheduleScrollUpdate).observe($(".topbar"));
 
 function render(data) {
+  document.body.classList.remove("is-loading");
+  document.body.setAttribute("aria-busy", "false");
+  $("#appVersion").textContent = `v${data.app.version}`;
   state.data = data;
   const useContextTimeline = data.range === "1" && state.contextData?.daily?.length > 1;
   const timelineData = useContextTimeline ? state.contextData : data;
@@ -545,7 +563,7 @@ function render(data) {
   animateVisuals();
 }
 
-async function refresh({ animate = false } = {}) {
+async function refresh({ animate = false, notify = false } = {}) {
   const requestId = ++state.requestId;
   if (state.controller) state.controller.abort();
   state.controller = new AbortController();
@@ -558,10 +576,13 @@ async function refresh({ animate = false } = {}) {
     const [response, contextResponse] = await Promise.all([usageRequest, contextRequest]);
     const data = await response.json(); if (!response.ok) throw new Error(data.error || "无法读取用量数据");
     const contextData = contextResponse?.ok ? await contextResponse.json() : null;
-    if (requestId === state.requestId) { state.contextData = contextData; state.motion = animate; hideTooltip(); render(data); state.motion = false; }
+    if (requestId === state.requestId) { state.contextData = contextData; state.motion = animate; hideTooltip(); render(data); state.motion = false; if (notify) showToast(t("syncSuccess")); }
   } catch (error) {
     if (error.name === "AbortError" || requestId !== state.requestId) return;
+    document.body.classList.remove("is-loading");
+    document.body.setAttribute("aria-busy", "false");
     const notice = $("#notice"); notice.textContent = t("refreshFailed", { message:error.message }); notice.classList.remove("hidden");
+    if (notify) showToast(t("refreshFailed", { message:error.message }));
   } finally {
     if (requestId === state.requestId) {
       button.classList.remove("loading"); button.disabled = false;
@@ -582,10 +603,10 @@ $$('[data-target]').forEach((button) => button.addEventListener("click", () => {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   document.getElementById(button.dataset.target).scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "start" });
 }));
-$("#refresh").addEventListener("click", () => refresh({ animate:true }));
-$("#themeToggle").addEventListener("click", () => { state.theme = state.theme === "dark" ? "light" : "dark"; localStorage.setItem("follow-your-codex:theme", state.theme); applyPreferences({ rerender:true }); });
-$("#localeToggle").addEventListener("click", () => { state.locale = state.locale === "zh" ? "en" : "zh"; localStorage.setItem("follow-your-codex:locale", state.locale); applyPreferences({ rerender:true }); });
-window.addEventListener("resize", () => { scheduleScrollUpdate(); clearTimeout(state.resizeTimer); state.resizeTimer = setTimeout(() => { measureHeader(); if (state.data) { const timelineData = state.data.range === "1" && state.contextData?.daily?.length > 1 ? state.contextData : state.data; renderTrend(timelineData); renderExtraAnalysis(state.data, timelineData); } }, 160); });
+$("#refresh").addEventListener("click", () => refresh({ animate:true, notify:true }));
+$("#themeToggle").addEventListener("click", () => { state.theme = state.theme === "dark" ? "light" : "dark"; localStorage.setItem("codex-meter:theme", state.theme); applyPreferences({ rerender:true }); showToast(t("themeChanged", { theme:t(state.theme === "dark" ? "themeDark" : "themeLight") })); });
+$("#localeToggle").addEventListener("click", () => { state.locale = state.locale === "zh" ? "en" : "zh"; localStorage.setItem("codex-meter:locale", state.locale); applyPreferences({ rerender:true }); showToast(t("localeChanged")); });
+window.addEventListener("resize", () => { scheduleScrollUpdate(); clearTimeout(state.resizeTimer); state.resizeTimer = setTimeout(() => { scheduleScrollUpdate(); if (state.data) { const timelineData = state.data.range === "1" && state.contextData?.daily?.length > 1 ? state.contextData : state.data; renderTrend(timelineData); renderExtraAnalysis(state.data, timelineData); } }, 160); });
 
 function updateClock() {
   if (!state.data) return;
@@ -593,5 +614,12 @@ function updateClock() {
   $("#headerStatus").textContent = t("autoRefresh", { time:stamp, seconds:Math.max(0, Math.ceil((state.nextRefresh-Date.now())/1000)) });
 }
 
+document.body.setAttribute("aria-busy", "true");
+document.addEventListener("click", (event) => {
+  const menu = $("#headerExport");
+  if (menu.open && !menu.contains(event.target)) menu.open = false;
+});
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") { $("#headerExport").open = false; hideTooltip(); } });
+$$("[data-export], .export-actions a").forEach((link) => link.addEventListener("click", () => { $("#headerExport").open = false; showToast(t("exportStarted")); }));
 refresh({ animate:true });
 setInterval(updateClock, 1000);

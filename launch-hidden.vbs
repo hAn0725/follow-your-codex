@@ -5,7 +5,7 @@ Set files = CreateObject("Scripting.FileSystemObject")
 folder = files.GetParentFolderName(WScript.ScriptFullName)
 nodePath = "C:\Program Files\nodejs\node.exe"
 If Not files.FileExists(nodePath) Then
-  MsgBox "Node.js was not found. Please install Node.js and try again.", 48, "follow your codex"
+  MsgBox "Node.js was not found. Please install Node.js 24 or newer and try again.", 48, "Codex Meter"
   WScript.Quit 1
 End If
 shell.CurrentDirectory = folder
