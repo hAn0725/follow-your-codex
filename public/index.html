@@ -21,7 +21,7 @@
           <button data-target="trends"><span>↗</span><b data-i18n="navTrends">趋势分析</b></button>
           <button data-target="data-source"><span>◎</span><b data-i18n="navData">数据与导出</b></button>
         </nav>
-        <div class="sidebar-foot"><a class="classic-link" href="/classic/index.html"><span data-i18n="classicVersion">经典版</span><span aria-hidden="true">↗</span></a><div class="app-version"><span id="appVersion">v0.6.0</span><span>Codex Meter</span></div><p class="privacy-compact" data-i18n="privacyCompact">仅本地读取</p><div class="side-preferences" aria-label="界面偏好" data-i18n-aria="viewPreferences"><button id="themeToggle" class="quiet-button" type="button" aria-pressed="true"><span aria-hidden="true">◐</span><b data-i18n="themeDark">深色</b></button><button id="localeToggle" class="quiet-button locale-button" type="button" aria-pressed="false">EN</button></div></div>
+        <div class="sidebar-foot"><div class="app-version"><span id="appVersion">v0.6.1</span><span>Codex Meter</span></div><p class="privacy-compact" data-i18n="privacyCompact">仅本地读取</p><div class="side-preferences" aria-label="界面偏好" data-i18n-aria="viewPreferences"><button id="themeToggle" class="quiet-button" type="button" aria-pressed="true"><span aria-hidden="true">◐</span><b data-i18n="themeDark">深色</b></button><button id="localeToggle" class="quiet-button locale-button" type="button" aria-pressed="false">EN</button></div></div>
       </aside>
 
       <main class="workspace">
@@ -60,7 +60,7 @@
           </div>
 
           <div class="dashboard-grid">
-            <article class="panel trend-panel"><div class="section-heading"><div><h2>Token 使用趋势</h2></div><div class="legend" aria-label="图例"><span><i class="key input"></i>每日总量</span><span id="trendHint">悬停查看明细</span></div></div><div id="trendChart" class="trend-chart" aria-label="每日 Token 平滑曲线图"></div></article>
+            <article class="panel trend-panel"><div class="section-heading"><div><h2>Token 使用趋势</h2><p id="trendWindow"></p></div><div class="legend" aria-label="图例"><span>每日总量</span><span id="trendHint">悬停查看明细</span></div></div><div id="trendChart" class="trend-chart" aria-label="Token 用量曲线图"></div></article>
             <article class="panel mix-panel"><div class="section-heading"><div><h2>Token 构成</h2></div></div><div class="mix-body"><div id="donut" class="donut" role="img" aria-label="Token 构成图"><div><strong id="donutTotal">—</strong><span>总计</span></div></div><div id="mixLegend" class="mix-legend"></div></div></article>
           </div>
 

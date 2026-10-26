@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1 — 2026-10-26
+
+- Make the one-day range a rolling 24-hour window ending at the current request time, with 24 hourly trend buckets and exact timestamp tooltips.
+- Keep summary totals, exports, and previous-period comparisons on the same rolling window; retain natural-day grouping for daily details.
+- Calculate the seven-day average independently of the selected range.
+- Refine neutral console styling, numeric typography, and the joined usage/capacity surface after studying codex-reset.com.
+- Continue with the current interface only; remove the classic entry and bundled duplicate assets. Old classic bookmarks redirect to the current homepage; v0.6.0 and earlier Git releases remain available.
+
 ## 0.6.0 — 2026-10-26
 
 - Rename the app, local package, reports, and exported downloads to Codex Meter.

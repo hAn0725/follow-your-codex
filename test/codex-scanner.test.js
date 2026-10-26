@@ -183,6 +183,45 @@ test("buildView aggregates days, models, sessions, and today", () => {
   assert.equal(view.sessions[0].eventCount, 2);
 });
 
+test("one-day view uses the last 24 hours with exact boundaries and hourly totals", () => {
+  const now = new Date("2026-10-26T20:17:42+08:00");
+  const start = now.getTime() - 86_400_000;
+  const events = [
+    [start - 86_400_000, 10], [start - 1, 20], [start, 30],
+    [start + 3_600_000 - 1, 40], [start + 3_600_000, 50],
+    [now.getTime(), 60], [now.getTime() + 1, 70],
+  ].map(([timestamp, total]) => ({ timestamp, model:"gpt-6.1-sol", project:"demo", sessionId:"s", usage:{input:total,cached:0,output:0,reasoning:0,total} }));
+  events.push({ ...events[2], model:"deepseek-chat", usage:{input:1000,cached:0,output:0,reasoning:0,total:1000} });
+  const view = buildView({events,sessions:[]}, "1", now);
+  assert.equal(view.timeline.startAt, start);
+  assert.equal(view.timeline.endAt, now.getTime());
+  assert.equal(view.timeline.buckets.length, 24);
+  assert.equal(view.timeline.buckets[0].usage.total, 70);
+  assert.equal(view.timeline.buckets[1].usage.total, 50);
+  assert.equal(view.timeline.buckets[23].usage.total, 60);
+  assert.equal(view.timeline.buckets.reduce((sum, row) => sum + row.usage.total, 0), 180);
+  assert.equal(view.totals.total, 180);
+  assert.equal(view.daily.reduce((sum, row) => sum + row.usage.total, 0), 180);
+  assert.equal(view.insights.averagePerDay, 180);
+  assert.equal(view.insights.comparison.previousTotal, 30);
+  assert.equal(view.insights.recentAverage, 210 / 7);
+  assert.equal(view.eventCount, 4);
+});
+
+test("empty rolling day retains 24 zero buckets and longer ranges stay daily", () => {
+  const snapshot = {events:[],sessions:[]};
+  for (const timestamp of ["2026-10-26T00:00:00+08:00", "2026-11-01T02:30:00-05:00"]) {
+    const view = buildView(snapshot, "1", new Date(timestamp));
+    assert.equal(view.timeline.endAt - view.timeline.startAt, 86_400_000);
+    assert.equal(view.timeline.buckets.length, 24);
+    assert.equal(view.totals.total, 0);
+    assert.ok(view.timeline.buckets.every((row) => row.events === 0));
+  }
+  const week = buildView(snapshot, "7", new Date("2026-10-26T20:17:42+08:00"));
+  assert.equal(week.timeline, null);
+  assert.equal(week.daily.length, 7);
+});
+
 test("buildView removes excluded external-provider events before all dashboard aggregates", () => {
   const gpt = parseSessionText(jsonl([
     { type: "session_meta", payload: { id: "gpt-session", cwd: "C:\\work\\gpt" } },

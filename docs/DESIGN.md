@@ -1,5 +1,11 @@
 # Codex Meter · v0.6 design notes
 
+## v0.6.1 · Codex Reset reference
+
+Inspected the actual [codex-reset.com](https://codex-reset.com/) homepage at desktop and narrow widths on 2026-10-26. Its compact navigation, monospace numeric hierarchy, thin dividers, and grouped status surfaces suit a local usage utility. Kept our neutral palette instead of copying its green/amber highlights, glow, animated background, or public reset forecasts.
+
+The current dashboard uses local Consolas/SFMono numeric typography, a shared usage/capacity frame, and a timestamped hourly trend. Chinese body copy keeps a proportional system font for legibility. The one-day chart covers exactly the preceding 24 elapsed hours; zero buckets remain visible, and hover/focus exposes exact interval boundaries. Current-interface development continues without a classic switch; previously published tags remain immutable.
+
 ## Purpose
 
 A local measurement workspace for Codex: see token volume, API-equivalent cost, remaining capacity, and the pattern behind usage. The existing accounting, exports, compressed-history support, and desktop lifecycle remain available.

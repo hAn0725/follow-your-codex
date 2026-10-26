@@ -43,7 +43,7 @@ function buildMarkdown(view) {
   const lines = [
     "# Codex Meter 用量报告",
     "",
-    `- 统计范围：${view.range === "all" ? "全部" : `${view.range} 天`}`,
+    `- 统计范围：${view.range === "1" ? "最近 24 小时" : view.range === "all" ? "全部" : `${view.range} 天`}`,
     `- 总 Token：${Math.round(view.totals.total).toLocaleString("zh-CN")}`,
     `- 今日 Token：${Math.round(view.today.total).toLocaleString("zh-CN")}`,
     `- 活跃天数：${view.insights.activeDays}`,
@@ -96,6 +96,11 @@ function sendJson(response, status, data) {
 }
 
 function serveFile(response, requestedPath) {
+  if (requestedPath === "/classic" || requestedPath.startsWith("/classic/")) {
+    response.writeHead(302, { Location:"/", "Cache-Control":"no-store" });
+    response.end();
+    return;
+  }
   const relative = requestedPath === "/" ? "index.html" : requestedPath.replace(/^\/+/, "");
   const resolved = path.resolve(PUBLIC_DIR, relative);
   if (!resolved.startsWith(path.resolve(PUBLIC_DIR) + path.sep) && resolved !== path.join(PUBLIC_DIR, "index.html")) {

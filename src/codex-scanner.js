@@ -350,12 +350,21 @@ function aggregate(parsedFiles, codexHome) {
 
 function rangeStart(range, now = new Date()) {
   if (range === "all") return 0;
+  if (range === "1") return now.getTime() - 24 * 60 * 60 * 1000;
   const days = Math.max(1, Number.parseInt(range, 10) || 30);
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1);
   return start.getTime();
 }
 
 function dateKeysForRange(range, events, now = new Date()) {
+  if (range === "1") {
+    const first = new Date(rangeStart(range, now));
+    const keys = [];
+    for (let cursor = new Date(first.getFullYear(), first.getMonth(), first.getDate()); cursor <= now; cursor.setDate(cursor.getDate() + 1)) {
+      keys.push(localDateKey(cursor.getTime()));
+    }
+    return keys;
+  }
   if (range === "all") {
     if (!events.length) return [localDateKey(now.getTime())];
     const first = new Date(events[0].timestamp);
@@ -442,15 +451,18 @@ function buildView(snapshot, range = "30", now = new Date()) {
   }));
   const activeRows = daily.filter((item) => item.usage.total > 0);
   const peakDay = activeRows.reduce((peak, item) => !peak || item.usage.total > peak.usage.total ? item : peak, null);
-  const daysInRange = Math.max(1, daily.length);
+  const daysInRange = range === "1" ? 1 : Math.max(1, daily.length);
   const averagePerDay = totals.total / daysInRange;
-  const recentRows = daily.slice(-Math.min(7, daily.length));
-  const recentAverage = recentRows.reduce((sum, item) => sum + item.usage.total, 0) / Math.max(1, recentRows.length);
+  const recentStart = rangeStart("7", now);
+  const recentAverage = snapshot.events
+    .filter((event) => event.timestamp >= recentStart && event.timestamp <= now.getTime() && !isExcludedExternalModel(event.model))
+    .reduce((sum, event) => sum + event.usage.total, 0) / 7;
 
   const numericDays = range === "all" ? null : Math.max(1, Number.parseInt(range, 10) || 30);
   let comparison = null;
   if (numericDays) {
-    const previousStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - numericDays * 2 + 1).getTime();
+    const previousStart = range === "1" ? start - 24 * 60 * 60 * 1000
+      : new Date(now.getFullYear(), now.getMonth(), now.getDate() - numericDays * 2 + 1).getTime();
     const previousEnd = start;
     const previousTotal = snapshot.events
       .filter((event) => event.timestamp >= previousStart && event.timestamp < previousEnd && !isExcludedExternalModel(event.model))
@@ -490,6 +502,25 @@ function buildView(snapshot, range = "30", now = new Date()) {
   }
 
   const cost = estimateCost(selected);
+  // Equal elapsed-hour buckets keep exactly 24 hours across midnight and DST.
+  // The final bucket includes the endpoint; all earlier buckets are half-open.
+  const timeline = range === "1" ? {
+    granularity: "hour",
+    startAt: start,
+    endAt: now.getTime(),
+    buckets: Array.from({ length: 24 }, (_, index) => ({
+      startAt: start + index * 3_600_000,
+      endAt: start + (index + 1) * 3_600_000,
+      usage: emptyUsage(), events: 0,
+    })),
+  } : null;
+  if (timeline) {
+    for (const event of selected) {
+      const index = Math.min(23, Math.floor((event.timestamp - start) / 3_600_000));
+      addUsage(timeline.buckets[index].usage, event.usage);
+      timeline.buckets[index].events += 1;
+    }
+  }
   const costByModel = new Map(cost.models.map((row) => [row.model, row]));
   const models = rank(modelMap).map((row) => {
     const modelCost = costByModel.get(row.name);
@@ -522,6 +553,7 @@ function buildView(snapshot, range = "30", now = new Date()) {
     cost,
     todayCost: estimateCost(selected.filter((event) => localDateKey(event.timestamp) === todayKey)),
     daily,
+    timeline,
     hourly: hourMap,
     weekdays: weekdayMap,
     heatmap: heatmap.flat(),

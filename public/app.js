@@ -99,6 +99,9 @@ function applyPreferences({ rerender = false } = {}) {
 }
 applyPreferences();
 
+Object.assign(translations.zh, { last24Hours:"最近 24 小时", hourlyTotal:"每小时用量", rollingChart:"最近 24 小时 Token 用量曲线" });
+Object.assign(translations.en, { last24Hours:"Last 24 hours", hourlyTotal:"Hourly usage", rollingChart:"Token usage over the last 24 hours" });
+
 function formatNumber(value) {
   const number = Number(value) || 0;
   if (number >= 1e9) return `${(number / 1e9).toFixed(number >= 1e10 ? 1 : 2)}B`;
@@ -112,6 +115,12 @@ function formatMoney(value, currency = "USD") {
   return new Intl.NumberFormat(state.locale === "en" ? "en-US" : "zh-CN", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0);
 }
 function formatDate(value) { return new Intl.DateTimeFormat(state.locale === "en" ? "en-US" : "zh-CN", { month: "short", day: "numeric" }).format(new Date(`${value}T00:00:00`)); }
+function formatHour(timestamp, withDate = false) {
+  return new Intl.DateTimeFormat(state.locale === "en" ? "en-GB" : "zh-CN", {
+    ...(withDate ? { month:"short", day:"numeric" } : {}),
+    hour:"2-digit", minute:"2-digit", hour12:false,
+  }).format(new Date(timestamp));
+}
 function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -195,7 +204,7 @@ function renderSummary(data) {
   const gptCost = data.cost.providers?.openai || data.cost;
   const money = (cost) => cost.pricedTokens ? formatMoney(cost.amount ?? cost.usd, cost.currency || "USD") : t("unpriced");
   $("#estimatedCost").textContent = money(gptCost);
-  $("#rangeLabel").textContent = data.range === "all" ? t("allHistory") : t("recent", { n:data.range });
+  $("#rangeLabel").textContent = data.range === "1" ? t("last24Hours") : data.range === "all" ? t("allHistory") : t("recent", { n:data.range });
   $("#costCoverage").textContent = gptCost.pricedTokens ? t("gptPriced", { n:formatNumber(gptCost.pricedTokens) }) : t("noGpt");
   $("#costParts").textContent = `GPT / Codex: ${t("input")} $${(gptCost.input ?? data.cost.inputUsd).toFixed(2)} · ${t("cached")} $${(gptCost.cached ?? data.cost.cachedUsd).toFixed(2)} · ${t("output")} $${(gptCost.output ?? data.cost.outputUsd).toFixed(2)}` + (data.cost.unknownModels.length ? ` · ${t("unknownModel")}：${t("unknownModelInfo")}` : "");
   const recent = data.daily.slice(-7), peak = Math.max(1, ...recent.map((d) => d.usage.total));
@@ -269,7 +278,15 @@ function renderTrend(data) {
   const width = Math.max(280, container.clientWidth || 780);
   const height = 292;
   const pad = { top: 18, right: 14, bottom: 32, left: 54 };
-  const daily = data.daily;
+  const isHourly = data.timeline?.granularity === "hour";
+  const daily = isHourly ? data.timeline.buckets : data.daily;
+  const rowLabel = (item) => isHourly ? `${formatHour(item.startAt, true)} – ${formatHour(item.endAt, true)}` : item.date;
+  $("#trendWindow").textContent = isHourly
+    ? `${formatHour(data.timeline.startAt, true)} — ${formatHour(data.timeline.endAt, true)}`
+    : `${formatDate(daily[0].date)} — ${formatDate(daily.at(-1).date)}`;
+  $(".trend-panel .legend span:first-child").textContent = t(isHourly ? "hourlyTotal" : "dailyTotal");
+  $("#trendHint").textContent = t(isHourly ? "last24Hours" : "hoverDetail");
+  container.setAttribute("aria-label", t(isHourly ? "rollingChart" : "trendTitle"));
   const totals = daily.map((item) => item.usage.total);
   if (!daily.length || !totals.some(Boolean)) {
     container.innerHTML = `<div class="empty">${t("noUsage")}</div>`;
@@ -277,43 +294,33 @@ function renderTrend(data) {
   }
   const max = Math.max(...totals, 1) * 1.12;
   const points = chartPoints(totals, width, height, pad, max);
-  const usableWidth = width - pad.left - pad.right;
-  const slot = usableWidth / Math.max(1, daily.length);
-  const barWidth = Math.max(2, Math.min(24, slot * .58));
+  if (isHourly) points.forEach((point, index) => {
+    point.x = pad.left + (index + .5) / daily.length * (width - pad.left - pad.right);
+  });
   const bottom = height - pad.bottom;
   const labelEvery = Math.max(1, Math.ceil(daily.length / Math.max(2, Math.floor(width / 110))));
-  const bars = daily.map((item, index) => {
-    const uncached = Math.max(0, item.usage.input - item.usage.cached);
-    const segments = [
-      { value: uncached, cls: "stack-input" },
-      { value: item.usage.cached, cls: "stack-cache" },
-      { value: item.usage.output, cls: "stack-output" },
-    ];
-    let y = bottom;
-    const x = points[index].x - barWidth / 2;
-    return segments.map((segment) => {
-      const segmentHeight = segment.value / max * (height - pad.top - pad.bottom);
-      y -= segmentHeight;
-      return `<rect class="${segment.cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${Math.max(0, segmentHeight).toFixed(1)}" rx="${Math.min(3, barWidth / 3)}"/>`;
-    }).join("");
-  }).join("");
+  const labels = isHourly ? [0, 6, 12, 18, 24].map((hour) => {
+    const x = pad.left + hour / 24 * (width - pad.left - pad.right);
+    return `<text x="${x}" y="${height - 7}" text-anchor="${hour === 0 ? "start" : hour === 24 ? "end" : "middle"}">${formatHour(data.timeline.startAt + hour * 3_600_000)}</text>`;
+  }).join("") : daily.map((item, index) => index % labelEvery === 0 || index === daily.length - 1
+    ? `<text x="${points[index].x}" y="${height - 7}" text-anchor="${index === 0 ? "start" : index === daily.length - 1 ? "end" : "middle"}">${formatDate(item.date)}</text>` : "").join("");
   container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img">
     ${[0, .25, .5, .75, 1].map((tick) => { const y = pad.top + (1 - tick) * (height - pad.top - pad.bottom); return `<line class="grid-line" x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}"/><text x="${pad.left - 9}" y="${y + 4}" text-anchor="end">${formatNumber(max * tick)}</text>`; }).join("")}
     <defs><linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--chart-a)" stop-opacity=".18"/><stop offset="100%" stop-color="var(--chart-a)" stop-opacity=".01"/></linearGradient></defs>
     <path fill="url(#curveFill)" d="${pathFromPoints(points)} L${points.at(-1).x},${bottom} L${points[0].x},${bottom} Z"/>
     <path class="trend-line" d="${pathFromPoints(points)}"/>
-    ${daily.map((item, index) => index % labelEvery === 0 || index === daily.length - 1 ? `<text x="${points[index].x}" y="${height - 7}" text-anchor="middle">${formatDate(item.date)}</text>` : "").join("")}
+    ${labels}
     <g id="hoverMarker" class="hidden"><line class="hover-guide" y1="${pad.top}" y2="${bottom}"/><circle class="hover-point" r="4"/></g>
     ${daily.map((item, index) => { const left = index === 0 ? pad.left : (points[index - 1].x + points[index].x) / 2; const right = index === daily.length - 1 ? width - pad.right : (points[index].x + points[index + 1].x) / 2; return `<rect class="hover-target" data-index="${index}" x="${left}" y="${pad.top}" width="${Math.max(2, right - left)}" height="${bottom - pad.top}"/>`; }).join("")}
   </svg>`;
   const marker = container.querySelector("#hoverMarker");
   container.querySelectorAll(".hover-target").forEach((target) => {
     target.setAttribute("tabindex", "0");
-    target.setAttribute("aria-label", `${daily[Number(target.dataset.index)].date} · ${formatFull(daily[Number(target.dataset.index)].usage.total)} Token`);
+    target.setAttribute("aria-label", `${rowLabel(daily[Number(target.dataset.index)])} · ${formatFull(daily[Number(target.dataset.index)].usage.total)} Token`);
     const reveal = (event) => {
       const index = Number(target.dataset.index); const item = daily[index]; const point = points[index];
       marker.classList.remove("hidden"); marker.querySelector("line").setAttribute("x1", point.x); marker.querySelector("line").setAttribute("x2", point.x); marker.querySelector("circle").setAttribute("cx", point.x); marker.querySelector("circle").setAttribute("cy", point.y);
-      showTooltip(event, `<b>${escapeHtml(item.date)}</b><span>${t("tooltipTotal")} ${formatFull(item.usage.total)}<br>${t("input")} ${formatFull(item.usage.input)} · ${t("cached")} ${formatFull(item.usage.cached)}<br>${t("output")} ${formatFull(item.usage.output)} · ${t("events", { n:item.events })}</span>`);
+      showTooltip(event, `<b>${escapeHtml(rowLabel(item))}</b><span>${t("tooltipTotal")} ${formatFull(item.usage.total)}<br>${t("input")} ${formatFull(item.usage.input)} · ${t("cached")} ${formatFull(item.usage.cached)}<br>${t("output")} ${formatFull(item.usage.output)} · ${t("events", { n:item.events })}</span>`);
     };
     target.addEventListener("mousemove", reveal);
     target.addEventListener("focus", reveal);
@@ -546,7 +553,7 @@ function render(data) {
   $("#heatHint").textContent = useContextTimeline ? t("recentReference") + t("heatHint") : t("heatHint");
   $("#cacheHint").textContent = useContextTimeline ? t("recentReference") + `${t("cachedInput")} ÷ ${t("input")}` : t("cacheHint");
   $("#cumulativeHint").textContent = useContextTimeline ? t("recentReference") + t("cumulativeHint").split(" · ")[0] : t("cumulativeHint");
-  renderSummary(data); renderLimits(data); renderTrend(timelineData); renderMix(data); renderHeatmap(timelineData); renderHourly(timelineData, useContextTimeline); renderProjectPie(data); renderDaily(data); renderExtraAnalysis(data, timelineData); updateExports(); scheduleScrollUpdate();
+  renderSummary(data); renderLimits(data); renderTrend(data); renderMix(data); renderHeatmap(timelineData); renderHourly(timelineData, useContextTimeline); renderProjectPie(data); renderDaily(data); renderExtraAnalysis(data, timelineData); updateExports(); scheduleScrollUpdate();
   const stamp = new Date(data.scannedAt).toLocaleTimeString(state.locale === "en" ? "en-US" : "zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   state.nextRefresh = Date.now() + 30_000;
   updateClock();
@@ -606,7 +613,7 @@ $$('[data-target]').forEach((button) => button.addEventListener("click", () => {
 $("#refresh").addEventListener("click", () => refresh({ animate:true, notify:true }));
 $("#themeToggle").addEventListener("click", () => { state.theme = state.theme === "dark" ? "light" : "dark"; localStorage.setItem("codex-meter:theme", state.theme); applyPreferences({ rerender:true }); showToast(t("themeChanged", { theme:t(state.theme === "dark" ? "themeDark" : "themeLight") })); });
 $("#localeToggle").addEventListener("click", () => { state.locale = state.locale === "zh" ? "en" : "zh"; localStorage.setItem("codex-meter:locale", state.locale); applyPreferences({ rerender:true }); showToast(t("localeChanged")); });
-window.addEventListener("resize", () => { scheduleScrollUpdate(); clearTimeout(state.resizeTimer); state.resizeTimer = setTimeout(() => { scheduleScrollUpdate(); if (state.data) { const timelineData = state.data.range === "1" && state.contextData?.daily?.length > 1 ? state.contextData : state.data; renderTrend(timelineData); renderExtraAnalysis(state.data, timelineData); } }, 160); });
+window.addEventListener("resize", () => { scheduleScrollUpdate(); clearTimeout(state.resizeTimer); state.resizeTimer = setTimeout(() => { scheduleScrollUpdate(); if (state.data) { const timelineData = state.data.range === "1" && state.contextData?.daily?.length > 1 ? state.contextData : state.data; renderTrend(state.data); renderExtraAnalysis(state.data, timelineData); } }, 160); });
 
 function updateClock() {
   if (!state.data) return;
