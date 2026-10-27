@@ -14,6 +14,9 @@ const RULES = [
   // intentionally displayed as an API-equivalent estimate only.
   { provider: "openai", models: ["gpt-6-astra"], rates: [10, 1, 50] },
   { provider: "openai", models: ["gpt-6.1-sol"], rates: [2, .1, 10] },
+  // GPT-6.1 Terra standard short-context pricing, verified 2026-10-27:
+  // https://developers.openai.com/api/docs/models/gpt-6.1-terra
+  { provider: "openai", models: ["gpt-6.1-terra"], rates: [1, .05, 5] },
   { provider: "openai", models: ["gpt-6-sol"], rates: [2, .2, 10] },
   { provider: "openai", models: ["gpt-6-luna"], rates: [.1, .01, .5] },
   { provider: "openai", models: ["gpt-5.6-sol"], rates: [4, .4, 20] },

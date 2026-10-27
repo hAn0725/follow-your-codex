@@ -3,8 +3,10 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const os = require("node:os");
+const { Worker } = require("node:worker_threads");
 const { spawn } = require("node:child_process");
-const { CodexScanner, buildView } = require("./src/codex-scanner");
+const { buildView } = require("./src/codex-scanner");
 
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, "public");
@@ -133,7 +135,8 @@ function openBrowser(url) {
 }
 
 function startServer(options = parseArgs(process.argv.slice(2))) {
-  const scanner = new CodexScanner({ codexHome: options.codexHome });
+  let scannerWorker = null;
+  let pendingScan = null;
   let latestSnapshot = null;
   let scanPromise = null;
   const pages = new Set();
@@ -150,7 +153,31 @@ function startServer(options = parseArgs(process.argv.slice(2))) {
 
   async function getSnapshot() {
     if (scanPromise) return scanPromise;
-    scanPromise = Promise.resolve().then(() => scanner.scan()).then((snapshot) => {
+    if (!scannerWorker) {
+      const worker = new Worker(path.join(ROOT, "src", "scanner-worker.js"), {
+        workerData: { codexHome:options.codexHome, persistentCacheDir:options.persistentCacheDir ?? path.join(os.tmpdir(), "codex-meter-cache") },
+      });
+      scannerWorker = worker;
+      worker.on("message", (message) => {
+        if (!pendingScan || pendingScan.worker !== worker) return;
+        const pending = pendingScan;
+        pendingScan = null;
+        if (message.error) pending.reject(new Error(message.error));
+        else pending.resolve(message.snapshot);
+      });
+      worker.on("error", (error) => {
+        if (scannerWorker === worker) scannerWorker = null;
+        if (pendingScan?.worker === worker) { pendingScan.reject(error); pendingScan = null; }
+      });
+      worker.on("exit", (code) => {
+        if (scannerWorker === worker) scannerWorker = null;
+        if (pendingScan?.worker === worker) { pendingScan.reject(new Error(`Scanner stopped (${code})`)); pendingScan = null; }
+      });
+    }
+    scanPromise = new Promise((resolve, reject) => {
+      pendingScan = { resolve, reject, worker:scannerWorker };
+      scannerWorker.postMessage("scan");
+    }).then((snapshot) => {
       latestSnapshot = snapshot;
       return snapshot;
     }).finally(() => {
@@ -227,12 +254,12 @@ function startServer(options = parseArgs(process.argv.slice(2))) {
   server.listen(options.port, HOST, () => {
     const url = `http://${HOST}:${server.address().port}`;
     console.log(`Codex Meter is running at ${url}`);
-    console.log(`Reading Codex metadata from ${scanner.sessionsDir} and ${scanner.archivedSessionsDir}`);
+    console.log("Reading local Codex session metadata.");
     console.log("Press Ctrl+C to stop.");
     if (!options.noOpen) openBrowser(url);
     if (options.desktop) scheduleExit(options.startupGraceMs ?? 120000);
   });
-  server.on("close", () => clearTimeout(exitTimer));
+  server.on("close", () => { clearTimeout(exitTimer); if (scannerWorker) scannerWorker.terminate(); });
 
   return server;
 }

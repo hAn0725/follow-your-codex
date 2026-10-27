@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.2 — 2026-10-27
+
+- Recognize GPT-6.1 Terra and estimate its standard short-context API-equivalent cost using $1 / $0.05 / $5 per million input / cached input / output tokens.
+- Move history scanning to a worker thread so the local server remains responsive during a cold scan.
+- Cache parsed usage metadata in the local temporary directory across launches, validating file size and timestamps before reuse and rebuilding from logs if the cache is unavailable or invalid.
+- Continue filtering excluded providers and keeping prompts, replies, and tool output out of the cache.
+
 ## 0.6.1 — 2026-10-26
 
 - Make the one-day range a rolling 24-hour window ending at the current request time, with 24 hourly trend buckets and exact timestamp tooltips.

@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const zlib = require("node:zlib");
+const crypto = require("node:crypto");
 const { version } = require("../package.json");
 const { estimateCost, isExcludedExternalModel, resolvePrice } = require("./pricing");
 
@@ -97,6 +98,9 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
 
   for (const line of text.split(/\r?\n/)) {
     if (!line.trim()) continue;
+    // Response items hold conversation/tool content rather than usage metadata.
+    // Skip only when the top-level type is unambiguous; otherwise parse normally.
+    if (/^\s*\{\s*(?:"timestamp"\s*:\s*"(?:[^"\\]|\\.)*"\s*,\s*)?"type"\s*:\s*"response_item"\s*[,}]/.test(line)) continue;
     let record;
     try {
       record = JSON.parse(line);
@@ -221,18 +225,67 @@ function listJsonlFiles(root) {
   return files;
 }
 
+function validCachedSession(value, filePath) {
+  return value && value.filePath === filePath && typeof value.sessionId === "string"
+    && typeof value.model === "string" && typeof value.project === "string" && Array.isArray(value.events)
+    && value.events.every((event) => event && Number.isFinite(event.timestamp)
+      && typeof event.sessionId === "string" && typeof event.model === "string" && typeof event.project === "string"
+      && event.usage && TOKEN_FIELDS.every((field) => Number.isFinite(event.usage[field]) && event.usage[field] >= 0))
+    && [value.latestContext, value.latestLimits].every((item) => item == null || Number.isFinite(item.timestamp));
+}
+
 class CodexScanner {
   constructor(options = {}) {
     this.codexHome = discoverCodexHome(options.codexHome);
     this.sessionsDir = path.join(this.codexHome, "sessions");
     this.archivedSessionsDir = path.join(this.codexHome, "archived_sessions");
     this.cache = new Map();
+    this.cacheFile = options.persistentCacheDir
+      ? path.join(options.persistentCacheDir, `scan-${crypto.createHash("sha256").update(this.codexHome).digest("hex")}.json`)
+      : null;
+    this.lastSavedAt = 0;
+    this.cacheDirty = false;
+    this.loadCache();
+  }
+
+  loadCache() {
+    if (!this.cacheFile) return;
+    try {
+      const saved = JSON.parse(fs.readFileSync(this.cacheFile, "utf8"));
+      if (saved.version !== 1 || saved.codexHome !== this.codexHome || !Array.isArray(saved.files)) return;
+      for (const item of saved.files) {
+        if (typeof item.path === "string" && Number.isFinite(item.size) && Number.isFinite(item.mtimeMs)
+            && Number.isFinite(item.ctimeMs) && validCachedSession(item.parsed, item.path)) {
+          this.cache.set(item.path, { size:item.size, mtimeMs:item.mtimeMs, ctimeMs:item.ctimeMs, parsed:item.parsed });
+        }
+      }
+      this.lastSavedAt = Date.now();
+    } catch {
+      // An absent, unreadable, or invalid cache always falls back to source logs.
+    }
+  }
+
+  saveCache() {
+    if (!this.cacheFile) return false;
+    const temporary = `${this.cacheFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
+    try {
+      fs.mkdirSync(path.dirname(this.cacheFile), { recursive:true });
+      const files = [...this.cache].map(([filePath, entry]) => ({ path:filePath, ...entry }));
+      fs.writeFileSync(temporary, JSON.stringify({ version:1, codexHome:this.codexHome, files }), { mode:0o600 });
+      fs.renameSync(temporary, this.cacheFile);
+      return true;
+    } catch {
+      // Cache persistence is optional; accounting still uses the source files.
+      try { fs.unlinkSync(temporary); } catch { /* no temporary file */ }
+      return false;
+    }
   }
 
   scan() {
     const files = [...listJsonlFiles(this.sessionsDir), ...listJsonlFiles(this.archivedSessionsDir)];
     const seen = new Set(files);
     const failures = new Map();
+    let changed = false;
     const warn = (code) => failures.set(code, (failures.get(code) || 0) + 1);
     for (const filePath of files) {
       let stat;
@@ -240,12 +293,14 @@ class CodexScanner {
         stat = fs.statSync(filePath);
       } catch {
         warn("read-failed");
+        if (this.cache.delete(filePath)) changed = true;
         continue;
       }
       const cached = this.cache.get(filePath);
-      if (cached && cached.size === stat.size && cached.mtimeMs === stat.mtimeMs) continue;
+      if (cached && cached.size === stat.size && cached.mtimeMs === stat.mtimeMs && cached.ctimeMs === stat.ctimeMs) continue;
       if (filePath.toLowerCase().endsWith(".zst") && typeof zlib.zstdDecompressSync !== "function") {
         warn("zstd-unavailable");
+        if (this.cache.delete(filePath)) changed = true;
         continue;
       }
       try {
@@ -254,14 +309,23 @@ class CodexScanner {
           ? zlib.zstdDecompressSync(bytes).toString("utf8")
           : bytes.toString("utf8");
         const parsed = parseSessionText(text, filePath, stat.mtimeMs);
-        this.cache.set(filePath, { size: stat.size, mtimeMs: stat.mtimeMs, parsed });
+        this.cache.set(filePath, { size: stat.size, mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs, parsed });
+        changed = true;
       } catch {
         // A transiently locked file remains eligible for the next refresh.
         warn("read-failed");
+        if (this.cache.delete(filePath)) changed = true;
       }
     }
     for (const cachedPath of this.cache.keys()) {
-      if (!seen.has(cachedPath)) this.cache.delete(cachedPath);
+      if (!seen.has(cachedPath)) { this.cache.delete(cachedPath); changed = true; }
+    }
+    this.cacheDirty ||= changed;
+    // A stale cache is safe: every file is validated again on the next start.
+    // Limit whole-cache rewrites when active sessions change every refresh.
+    if (this.cacheDirty && (!this.lastSavedAt || Date.now() - this.lastSavedAt >= 60_000) && this.saveCache()) {
+      this.cacheDirty = false;
+      this.lastSavedAt = Date.now();
     }
     const snapshot = aggregate([...this.cache.values()].map((item) => item.parsed), this.codexHome);
     snapshot.scanWarnings = [...failures].map(([code, count]) => ({ code, count }));

@@ -34,6 +34,7 @@ test("pricing recognizes all current GPT-6 Codex model ids", () => {
   const usage = { input: 1000000, cached: 500000, output: 1000000, reasoning: 0, total: 2000000 };
   const cost = estimateCost([
     { model: "gpt-6.1-sol", usage },
+    { model: "gpt-6.1-terra", usage },
     { model: "gpt-6-sol", usage },
     { model: "gpt-6-luna", usage },
     { model: "gpt-6-astra", usage },
@@ -41,6 +42,7 @@ test("pricing recognizes all current GPT-6 Codex model ids", () => {
   const models = Object.fromEntries(cost.models.map((model) => [model.model, model.amount]));
   assert.deepEqual(models, {
     "gpt-6.1-sol": 11.05,
+    "gpt-6.1-terra": 5.525,
     "gpt-6-sol": 11.1,
     "gpt-6-luna": 0.555,
     "gpt-6-astra": 55.5,

@@ -42,6 +42,47 @@ test("compressed September history and archive copies retain original dates with
   assert.equal(partial.discoveredFileCount, 3);
 });
 
+test("persistent cache reuses metadata across starts and refreshes changed or removed logs", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-cache-test-"));
+  t.after(() => fs.rmSync(root, { recursive:true, force:true }));
+  const home = path.join(root, "home"), cacheDir = path.join(root, "cache");
+  fs.mkdirSync(path.join(home, "sessions"), { recursive:true });
+  const source = path.join(home, "sessions", "history.jsonl");
+  const log = (total) => jsonl([
+    { timestamp:"2026-10-26T10:00:00Z", type:"response_item", payload:{ content:"private-prompt-example" } },
+    { type:"session_meta", payload:{ id:"cache-session" } },
+    { type:"turn_context", payload:{ model:"gpt-6.1-terra" } },
+    { type:"token_usage_record", timestamp:"2026-10-26T10:00:00Z", payload:{ usage:{ input_tokens:total, total_tokens:total } } },
+  ]);
+  fs.writeFileSync(source, log(100));
+  const first = new CodexScanner({ codexHome:home, persistentCacheDir:cacheDir });
+  assert.equal(first.scan().events[0].usage.total, 100);
+  const cachePath = first.cacheFile;
+  assert.equal(fs.readFileSync(cachePath, "utf8").includes("private-prompt-example"), false);
+  const second = new CodexScanner({ codexHome:home, persistentCacheDir:cacheDir });
+  const originalRead = fs.readFileSync;
+  let reads = 0;
+  fs.readFileSync = (...args) => { if (args[0] === source) reads++; return originalRead(...args); };
+  try {
+    assert.equal(second.scan().events[0].usage.total, 100);
+    assert.equal(reads, 0);
+    fs.writeFileSync(source, log(250));
+    assert.equal(second.scan().events[0].usage.total, 250);
+    assert.equal(reads, 1);
+    // A restarted process rejects the older disk entry even before its next write.
+    assert.equal(new CodexScanner({ codexHome:home, persistentCacheDir:cacheDir }).scan().events[0].usage.total, 250);
+    fs.unlinkSync(source);
+    assert.equal(second.scan().events.length, 0);
+    fs.writeFileSync(source, log(300));
+    fs.writeFileSync(cachePath, "invalid cache");
+    assert.equal(new CodexScanner({ codexHome:home, persistentCacheDir:cacheDir }).scan().events[0].usage.total, 300);
+    const malformed = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+    malformed.files[0].parsed.events = [null];
+    fs.writeFileSync(cachePath, JSON.stringify(malformed));
+    assert.equal(new CodexScanner({ codexHome:home, persistentCacheDir:cacheDir }).scan().events[0].usage.total, 300);
+  } finally { fs.readFileSync = originalRead; }
+});
+
 test("migrated usage records replace legacy mirrors with different cumulative baselines", () => {
   const usage = { input_tokens: 100, cached_input_tokens: 40, output_tokens: 20, total_tokens: 120 };
   const modern = { type: "token_usage_record", timestamp: "2026-10-14T12:00:00Z", payload: {

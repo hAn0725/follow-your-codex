@@ -97,6 +97,7 @@ function applyPreferences({ rerender = false } = {}) {
   updateRangeUI();
   if (rerender && state.data) render(state.data);
 }
+translations.zh.privacyCompact = "仅本地处理";
 applyPreferences();
 
 Object.assign(translations.zh, { last24Hours:"最近 24 小时", hourlyTotal:"每小时用量", rollingChart:"最近 24 小时 Token 用量曲线" });
