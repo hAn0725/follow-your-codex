@@ -12,6 +12,9 @@ const RULES = [
   // OpenAI standard, short-context reference prices per 1M tokens.
   // A Codex/ChatGPT plan is not billed as an API invoice, so these values are
   // intentionally displayed as an API-equivalent estimate only.
+  // GPT-6.2 rates verified 2026-11-26 against the official model pages.
+  { provider: "openai", models: ["gpt-6.2-astra"], rates: [8, .4, 40] },
+  { provider: "openai", models: ["gpt-6.2-sol"], rates: [2, .1, 10] },
   { provider: "openai", models: ["gpt-6-astra"], rates: [10, 1, 50] },
   { provider: "openai", models: ["gpt-6.1-sol"], rates: [2, .1, 10] },
   // GPT-6.1 Terra standard short-context pricing, verified 2026-10-27:

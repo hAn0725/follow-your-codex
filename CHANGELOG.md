@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.3 — 2026-11-26
+
+- Add standard short-context API-equivalent rates for GPT-6.2 Sol and GPT-6.2 Astra.
+- Match desktop Codex and Work usage records to their own turn context, including usage written before the context or after a model switch.
+- Rebuild the local metadata cache once so historical turn attribution uses the corrected parser.
+
+- Refine the current monochrome dashboard with neutral theme tokens, more readable metadata, consistent panel spacing, and compact mobile actions.
+- Fix 320px horizontal overflow and fit heatmaps, composition legends, and chart labels to narrow viewports.
+- Align range clicking and dragging with the four visible segments while retaining native keyboard controls and descriptive accessible values.
+- Add arrow-key chart exploration with one Tab entry per supported chart; keep custom tooltips within the viewport.
+- Improve refreshing, disabled exports, unavailable local storage, empty-data presentation, and localized error recovery.
+- Preserve GPT accounting, Terra pricing, rolling 24-hour trends, exports, and the worker-backed startup cache without adding dependencies.
+
 ## 0.6.2 — 2026-10-27
 
 - Recognize GPT-6.1 Terra and estimate its standard short-context API-equivalent cost using $1 / $0.05 / $5 per million input / cached input / output tokens.

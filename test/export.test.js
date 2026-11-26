@@ -38,6 +38,8 @@ test("pricing recognizes all current GPT-6 Codex model ids", () => {
     { model: "gpt-6-sol", usage },
     { model: "gpt-6-luna", usage },
     { model: "gpt-6-astra", usage },
+    { model: "gpt-6.2-sol", usage },
+    { model: "openai/gpt-6.2-astra-2026-11-17", usage },
   ]);
   const models = Object.fromEntries(cost.models.map((model) => [model.model, model.amount]));
   assert.deepEqual(models, {
@@ -46,6 +48,8 @@ test("pricing recognizes all current GPT-6 Codex model ids", () => {
     "gpt-6-sol": 11.1,
     "gpt-6-luna": 0.555,
     "gpt-6-astra": 55.5,
+    "gpt-6.2-sol": 11.05,
+    "openai/gpt-6.2-astra-2026-11-17": 44.2,
   });
   assert.equal(cost.unpricedTokens, 0);
 });

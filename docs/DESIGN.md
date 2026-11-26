@@ -1,5 +1,15 @@
 # Codex Meter · v0.6 design notes
 
+## 2026-10-29 · Impeccable refinement
+
+The existing workspace remains the visual authority. Refine its monochrome measurement language rather than replace it with a marketing layout. Neutral light/dark surfaces, legible metadata, a joined usage/capacity frame, and restrained 160–220ms feedback support repeated daily inspection. No new font, component framework, asset download, or runtime dependency is required.
+
+Raise common metadata from 11px to 12px; retain compact axis labels where a 24-column heatmap needs them. Use fixed, tabular numeric sizes and a consistent 12px panel radius. Keep chart grids subordinate and use filled/empty quota rails without decorative caps. At mobile widths the sync action becomes an accessible icon button; composition legends stack when a side-by-side layout becomes cramped. The sticky mobile toolbar contracts to 60px while scrolling.
+
+The four visible range segments own pointer hit testing; a drag commits once on release. Native keyboard range input remains intact. Dense heatmaps, hourly bars, trends, cumulative points, cache bars, and weekday bars have one Tab entry each and arrow-key navigation. Custom tooltips measure their rendered dimensions before clamping to the viewport. Loading, refresh, disabled export, no-record, read-failure, and storage-denied paths remain understandable in both languages.
+
+These refinements are included in v0.6.3. Historical design and release notes below describe their original versions.
+
 ## v0.6.1 · Codex Reset reference
 
 Inspected the actual [codex-reset.com](https://codex-reset.com/) homepage at desktop and narrow widths on 2026-10-26. Its compact navigation, monospace numeric hierarchy, thin dividers, and grouped status surfaces suit a local usage utility. Kept our neutral palette instead of copying its green/amber highlights, glow, animated background, or public reset forecasts.

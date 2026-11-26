@@ -51,10 +51,13 @@ const iconPaths = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
   ring: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M16 3.9A9 9 0 0 1 20.1 8H16z"/>',
   refresh: '<path d="M20 7a9 9 0 0 0-15-1L3 9m0-5v5h5m-4 8a9 9 0 0 0 15 1l2-3m0 5v-5h-5"/>',
+  theme: '<path d="M12 3a9 9 0 1 0 0 18z"/><circle cx="12" cy="12" r="9"/>',
 };
 function icon(name) { return `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`; }
 $$(".sidebar nav button > span").forEach((span) => { span.innerHTML = icon({overview:"home",trends:"trend","data-source":"data"}[span.parentElement.dataset.target]); });
 $("#refresh > span").innerHTML = icon("refresh");
+$("#themeToggle > span").innerHTML = icon("theme");
+$(".source-icon").innerHTML = icon("data");
 $$(".trend-panel h2, .heat-panel h3, .mix-panel h2, .daily-panel h3").forEach((heading) => {
   const name = heading.closest(".heat-panel") ? "grid" : heading.closest(".mix-panel") ? "ring" : heading.closest(".daily-panel") ? "sessions" : "trend";
   heading.insertAdjacentHTML("afterbegin", icon(name));
@@ -76,9 +79,8 @@ function setStaticCopy() {
 }
 function updateRangeUI(value = Number($("#rangeSlider").value)) {
   const slider = $("#rangeSwitch");
-  const progress = value / (rangeValues.length - 1);
-  slider.style.setProperty("--range-progress", progress);
   slider.style.setProperty("--range-step", value);
+  $("#rangeSlider").setAttribute("aria-valuetext", t(["range1", "range7", "range30", "rangeAll"][value]));
   $$("[data-range-value]").forEach((item) => item.classList.toggle("active", Number(item.dataset.rangeValue) === value));
 }
 function applyPreferences({ rerender = false } = {}) {
@@ -95,9 +97,25 @@ function applyPreferences({ rerender = false } = {}) {
   $("#localeToggle").setAttribute("aria-pressed", String(state.locale === "en"));
   setStaticCopy();
   updateRangeUI();
+  if (!state.data) {
+    $("#headerStatus").textContent = t("loading");
+    $("#costCoverage").textContent = t("loading");
+    $("#rangeLabel").textContent = state.range === "all" ? t("allHistory") : t("recent", { n:state.range });
+    $("#limitAge").textContent = t("waiting");
+    $("#todayFoot").textContent = t("localTimezone");
+    $("#comparison").textContent = t("waiting");
+    $("#streak").textContent = t("streak", { n:"—" });
+    $("#peakDayValue").textContent = t("noRecords");
+    $("#busyWeekday").textContent = t("localTime");
+    $("#hourlyHint").textContent = t("hourlyHint");
+    $("#cumulativeHint").textContent = t("cumulativeHint");
+    $("#heatPeak").textContent = t("localTime");
+  }
   if (rerender && state.data) render(state.data);
 }
 translations.zh.privacyCompact = "仅本地处理";
+Object.assign(translations.zh, { cumulativeValue:"累计", retryHint:"请检查本地服务后点击同步重试。", chartKeyboard:"方向键查看，Tab 离开图表" });
+Object.assign(translations.en, { cumulativeValue:"Cumulative", retryHint:"Check the local service and sync to retry.", chartKeyboard:"Arrow keys to explore, Tab to leave chart" });
 applyPreferences();
 
 Object.assign(translations.zh, { last24Hours:"最近 24 小时", hourlyTotal:"每小时用量", rollingChart:"最近 24 小时 Token 用量曲线" });
@@ -166,11 +184,36 @@ function showTooltip(event, html) {
   const clientX = Number.isFinite(event.clientX) ? event.clientX : rect.right;
   const clientY = Number.isFinite(event.clientY) ? event.clientY : rect.top;
   tooltip.innerHTML = html;
-  tooltip.style.left = `${Math.max(8, Math.min(window.innerWidth - 265, clientX + 14))}px`;
-  tooltip.style.top = `${Math.max(8, clientY - 74)}px`;
   tooltip.classList.remove("hidden");
+  const { width, height } = tooltip.getBoundingClientRect();
+  const viewportWidth = document.documentElement.clientWidth;
+  const left = clientX + 14 + width > viewportWidth - 8 ? clientX - width - 12 : clientX + 14;
+  const top = clientY + height + 12 > window.innerHeight - 8 ? clientY - height - 12 : clientY + 12;
+  tooltip.style.left = `${Math.max(8, Math.min(viewportWidth - width - 8, left))}px`;
+  tooltip.style.top = `${Math.max(8, Math.min(window.innerHeight - height - 8, top))}px`;
 }
 function hideTooltip() { $("#tooltip").classList.add("hidden"); }
+// One Tab stop per chart, with arrow navigation instead of hundreds of cells.
+function enableChartNavigation(container, selector, columns = 1) {
+  const targets = [...container.querySelectorAll(selector)];
+  container.title = t("chartKeyboard");
+  targets.forEach((target, index) => {
+    target.setAttribute("tabindex", index === 0 ? "0" : "-1");
+    target.addEventListener("keydown", (event) => {
+      const delta = { ArrowRight:1, ArrowLeft:-1, ArrowDown:columns, ArrowUp:-columns }[event.key];
+      if (delta === undefined && event.key !== "Home" && event.key !== "End") return;
+      event.preventDefault();
+      const next = event.key === "Home" ? 0 : event.key === "End" ? targets.length - 1 : Math.max(0, Math.min(targets.length - 1, index + delta));
+      target.setAttribute("tabindex", "-1");
+      targets[next].setAttribute("tabindex", "0");
+      targets[next].focus({ preventScroll:true });
+    });
+    target.addEventListener("pointerdown", () => {
+      targets.forEach((item) => item.setAttribute("tabindex", item === target ? "0" : "-1"));
+      target.focus({ preventScroll:true });
+    });
+  });
+}
 const countFrames = new WeakMap();
 function setCount(selector, value, formatter = formatNumber) {
   const node = $(selector); const previous = Number(node.dataset.value ?? value); const next = Number(value) || 0;
@@ -204,7 +247,7 @@ function showToast(message) {
 function renderSummary(data) {
   const gptCost = data.cost.providers?.openai || data.cost;
   const money = (cost) => cost.pricedTokens ? formatMoney(cost.amount ?? cost.usd, cost.currency || "USD") : t("unpriced");
-  $("#estimatedCost").textContent = money(gptCost);
+  $("#estimatedCost").textContent = data.totals.total ? money(gptCost) : "—";
   $("#rangeLabel").textContent = data.range === "1" ? t("last24Hours") : data.range === "all" ? t("allHistory") : t("recent", { n:data.range });
   $("#costCoverage").textContent = gptCost.pricedTokens ? t("gptPriced", { n:formatNumber(gptCost.pricedTokens) }) : t("noGpt");
   $("#costParts").textContent = `GPT / Codex: ${t("input")} $${(gptCost.input ?? data.cost.inputUsd).toFixed(2)} · ${t("cached")} $${(gptCost.cached ?? data.cost.cachedUsd).toFixed(2)} · ${t("output")} $${(gptCost.output ?? data.cost.outputUsd).toFixed(2)}` + (data.cost.unknownModels.length ? ` · ${t("unknownModel")}：${t("unknownModelInfo")}` : "");
@@ -213,7 +256,7 @@ function renderSummary(data) {
   setCount("#totalTokens", data.totals.total);
   setCount("#todayTokens", data.today.total);
   setCount("#averageTokens", data.insights.averagePerDay);
-  setCount("#cacheRate", data.totals.input ? data.totals.cached / data.totals.input * 100 : 0, (value) => `${value.toFixed(1)}%`);
+  setCount("#cacheRate", data.totals.input ? data.totals.cached / data.totals.input * 100 : 0, (value) => data.totals.input ? `${value.toFixed(1)}%` : "—");
   setCount("#activeDays", data.insights.activeDays, formatFull);
   $("#streak").textContent = t("streak", { n:data.insights.streak });
   $("#totalFoot").textContent = `${formatNumber(data.totals.input)} ${t("input")} · ${formatNumber(data.totals.output)} ${t("output")}`;
@@ -284,7 +327,7 @@ function renderTrend(data) {
   const rowLabel = (item) => isHourly ? `${formatHour(item.startAt, true)} – ${formatHour(item.endAt, true)}` : item.date;
   $("#trendWindow").textContent = isHourly
     ? `${formatHour(data.timeline.startAt, true)} — ${formatHour(data.timeline.endAt, true)}`
-    : `${formatDate(daily[0].date)} — ${formatDate(daily.at(-1).date)}`;
+    : daily.length ? `${formatDate(daily[0].date)} — ${formatDate(daily.at(-1).date)}` : t("noRecords");
   $(".trend-panel .legend span:first-child").textContent = t(isHourly ? "hourlyTotal" : "dailyTotal");
   $("#trendHint").textContent = t(isHourly ? "last24Hours" : "hoverDetail");
   container.setAttribute("aria-label", t(isHourly ? "rollingChart" : "trendTitle"));
@@ -305,7 +348,7 @@ function renderTrend(data) {
     return `<text x="${x}" y="${height - 7}" text-anchor="${hour === 0 ? "start" : hour === 24 ? "end" : "middle"}">${formatHour(data.timeline.startAt + hour * 3_600_000)}</text>`;
   }).join("") : daily.map((item, index) => index % labelEvery === 0 || index === daily.length - 1
     ? `<text x="${points[index].x}" y="${height - 7}" text-anchor="${index === 0 ? "start" : index === daily.length - 1 ? "end" : "middle"}">${formatDate(item.date)}</text>` : "").join("");
-  container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img">
+  container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="group" aria-label="${t(isHourly ? "rollingChart" : "trendTitle")}">
     ${[0, .25, .5, .75, 1].map((tick) => { const y = pad.top + (1 - tick) * (height - pad.top - pad.bottom); return `<line class="grid-line" x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}"/><text x="${pad.left - 9}" y="${y + 4}" text-anchor="end">${formatNumber(max * tick)}</text>`; }).join("")}
     <defs><linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--chart-a)" stop-opacity=".18"/><stop offset="100%" stop-color="var(--chart-a)" stop-opacity=".01"/></linearGradient></defs>
     <path fill="url(#curveFill)" d="${pathFromPoints(points)} L${points.at(-1).x},${bottom} L${points[0].x},${bottom} Z"/>
@@ -328,6 +371,7 @@ function renderTrend(data) {
     target.addEventListener("mouseleave", () => { marker.classList.add("hidden"); hideTooltip(); });
     target.addEventListener("blur", () => { marker.classList.add("hidden"); hideTooltip(); });
   });
+  enableChartNavigation(container, ".hover-target");
 }
 
 function renderMix(data) {
@@ -365,6 +409,7 @@ function renderHeatmap(data) {
     const reveal = (event) => showTooltip(event, `<b>${weekdays()[cell.dataset.day]} ${String(cell.dataset.hour).padStart(2, "0")}:00</b><span>${formatFull(cell.dataset.total)} Token · ${t("events", { n:cell.dataset.events })}</span>`);
     cell.addEventListener("mousemove", reveal); cell.addEventListener("focus", reveal); cell.addEventListener("mouseleave", hideTooltip); cell.addEventListener("blur", hideTooltip);
   });
+  enableChartNavigation($("#heatmap"), ".heat-cell[data-hour]", 24);
 }
 
 function renderHourly(data, contextTimeline = false) {
@@ -386,6 +431,7 @@ function renderHourly(data, contextTimeline = false) {
     column.addEventListener("mousemove", reveal); column.addEventListener("focus", reveal);
     column.addEventListener("mouseleave", hideTooltip); column.addEventListener("blur", hideTooltip);
   });
+  enableChartNavigation($("#hourlyChart"), ".hourly-column");
 }
 
 function renderProjectPie(data) {
@@ -436,6 +482,10 @@ function updateExports() {
   $("#exportMd").href = `${base}&format=md`;
   $("#exportJson").href = `${base}&format=json`;
 }
+function updateExportAvailability() {
+  const disabled = !state.data || document.body.classList.contains("is-updating");
+  $$("[data-export], .export-actions a").forEach((link) => link.setAttribute("aria-disabled", String(disabled)));
+}
 
 function renderEfficiencyCharts(data) {
   const rows = data.daily;
@@ -455,14 +505,14 @@ function renderExtraAnalysis(data, timelineData = data) {
   renderEfficiencyCharts(timelineData);
   let sum = 0;
   const values = timelineData.daily.map((row) => (sum += row.usage.total));
-  const width = Math.max(320, $("#cumulativeChart").clientWidth || 640);
+  const width = Math.max(240, $("#cumulativeChart").clientWidth || 640);
   const height = 220, pad = { left: 55, right: 18, top: 15, bottom: 30 };
   const pts = chartPoints(values, width, height, pad, Math.max(1, sum) * 1.1);
   $("#cumulativeTotal").textContent = formatNumber(sum) + " Token";
   $("#cumulativeChart").innerHTML = !sum ? `<div class="empty">${t("noUsage")}</div>` : `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${t("cumulative")} ${formatFull(sum)} Token">
     ${[0,.5,1].map((r) => { const y = pad.top + (1-r)*(height-pad.top-pad.bottom); return `<line class="grid-line" x1="55" x2="${width-18}" y1="${y}" y2="${y}"/><text x="46" y="${y+4}" text-anchor="end">${formatNumber(sum*1.1*r)}</text>`; }).join("")}
     <path class="trend-line" d="${pathFromPoints(pts)}"/>
-    ${pts.map((p,i) => `<circle cx="${p.x}" cy="${p.y}" r="7" fill="transparent" tabindex="0"><title>${timelineData.daily[i].date} · 累计 ${formatFull(values[i])} Token</title></circle>`).join("")}
+    ${pts.map((p,i) => `<circle cx="${p.x}" cy="${p.y}" r="7" fill="transparent" tabindex="0" aria-label="${timelineData.daily[i].date} · ${t("cumulativeValue")} ${formatFull(values[i])} Token"><title>${timelineData.daily[i].date} · ${t("cumulativeValue")} ${formatFull(values[i])} Token</title></circle>`).join("")}
     <text x="55" y="215">${formatDate(timelineData.daily[0].date)}</text><text x="${width-18}" y="215" text-anchor="end">${formatDate(timelineData.daily.at(-1).date)}</text></svg>`;
   const activeRows = timelineData.daily.filter((row) => row.usage.total > 0);
   const peak = activeRows.reduce((best, row) => !best || row.usage.total > best.usage.total ? row : best, null);
@@ -472,16 +522,19 @@ function renderExtraAnalysis(data, timelineData = data) {
   const weekdayTotals = Array.from({ length: 7 }, () => 0);
   for (const row of timelineData.daily) weekdayTotals[(new Date(`${row.date}T00:00:00`).getDay() + 6) % 7] += row.usage.total;
   const weekdayMax = Math.max(...weekdayTotals, 1);
-  const weeklyWidth = Math.max(320, $("#weeklyPattern").clientWidth || 760);
+  const weeklyWidth = Math.max(240, $("#weeklyPattern").clientWidth || 760);
   const weeklyHeight = 210, weeklyPad = { top: 28, right: 14, bottom: 34, left: 44 };
   const weeklyBottom = weeklyHeight - weeklyPad.bottom;
   const weeklyChartWidth = weeklyWidth - weeklyPad.left - weeklyPad.right;
   const weeklySlot = weeklyChartWidth / 7;
   const weeklyBarWidth = Math.min(48, weeklySlot * .56);
-  $("#weeklyPattern").innerHTML = `<svg viewBox="0 0 ${weeklyWidth} ${weeklyHeight}" preserveAspectRatio="none" role="img" aria-label="${t("weekly")} Token"><defs><linearGradient id="weeklyBarGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--chart-a)"/><stop offset="100%" stop-color="var(--chart-c)"/></linearGradient></defs>
+  $("#weeklyPattern").innerHTML = `<svg viewBox="0 0 ${weeklyWidth} ${weeklyHeight}" preserveAspectRatio="none" role="img" aria-label="${t("weekly")} Token">
     ${[0,.25,.5,.75,1].map((ratio) => { const y = weeklyPad.top + (1 - ratio) * (weeklyBottom - weeklyPad.top); return `<line class="grid-line" x1="${weeklyPad.left}" x2="${weeklyWidth - weeklyPad.right}" y1="${y}" y2="${y}"/><text x="${weeklyPad.left - 8}" y="${y + 4}" text-anchor="end">${formatNumber(weekdayMax * ratio)}</text>`; }).join("")}
-    ${weekdayTotals.map((value, index) => { const height = value / weekdayMax * (weeklyBottom - weeklyPad.top); const x = weeklyPad.left + index * weeklySlot + (weeklySlot - weeklyBarWidth) / 2; const y = weeklyBottom - height; return `<g class="weekday-bar" tabindex="0" aria-label="${weekdays()[index]}, ${formatFull(value)} Token"><title>${weekdays()[index]} · ${formatFull(value)} Token</title><rect x="${x}" y="${y}" width="${weeklyBarWidth}" height="${Math.max(2, height)}" rx="5"/><text x="${x + weeklyBarWidth / 2}" y="${Math.max(weeklyPad.top - 7, y - 7)}" text-anchor="middle">${value ? formatNumber(value) : ""}</text><text x="${x + weeklyBarWidth / 2}" y="${weeklyHeight - 10}" text-anchor="middle">${weekdays()[index]}</text></g>`; }).join("")}
+    ${weekdayTotals.map((value, index) => { const height = value / weekdayMax * (weeklyBottom - weeklyPad.top); const x = weeklyPad.left + index * weeklySlot + (weeklySlot - weeklyBarWidth) / 2; const y = weeklyBottom - height; return `<g class="weekday-bar" tabindex="0" aria-label="${weekdays()[index]}, ${formatFull(value)} Token"><title>${weekdays()[index]} · ${formatFull(value)} Token</title><rect x="${x}" y="${y}" width="${weeklyBarWidth}" height="${value ? Math.max(2, height) : 0}" rx="5"/><text class="weekday-value" visibility="${weeklySlot < 45 ? 'hidden' : 'visible'}" x="${x + weeklyBarWidth / 2}" y="${Math.max(weeklyPad.top - 7, y - 7)}" text-anchor="middle">${value ? formatNumber(value) : ""}</text><text x="${x + weeklyBarWidth / 2}" y="${weeklyHeight - 10}" text-anchor="middle">${weekdays()[index]}</text></g>`; }).join("")}
   </svg>`;
+  enableChartNavigation($("#cumulativeChart"), "circle[tabindex]");
+  enableChartNavigation($("#cacheTrend"), "rect[tabindex]");
+  enableChartNavigation($("#weeklyPattern"), ".weekday-bar");
   $("#modelShare").innerHTML = data.models.length ? data.models.map((row) => {
     const cacheRate = row.cacheRate;
     const unknown = row.pricingStatus === "unpriced";
@@ -493,7 +546,6 @@ function renderExtraAnalysis(data, timelineData = data) {
   $("#efficiencySummary").textContent = `${t("cacheRate")} = ${t("cached")} ÷ ${t("input")} · ${state.locale === "en" ? "Average per event" : "平均每个用量事件"} ${formatNumber(data.eventCount ? data.totals.total/data.eventCount : 0)} Token`;
 }
 
-const headerElement = $(".topbar");
 document.fonts.ready.then(scheduleScrollUpdate);
 // Use the sticky header's real lower edge as the reading line.
 let scrollFrame = 0;
@@ -541,6 +593,8 @@ function scheduleScrollUpdate() {
   if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollState);
 }
 window.addEventListener("scroll", scheduleScrollUpdate, { passive: true });
+window.addEventListener("wheel", hideTooltip, { passive:true });
+window.addEventListener("touchmove", hideTooltip, { passive:true });
 new ResizeObserver(scheduleScrollUpdate).observe($(".topbar"));
 
 function render(data) {
@@ -576,6 +630,9 @@ async function refresh({ animate = false, notify = false } = {}) {
   if (state.controller) state.controller.abort();
   state.controller = new AbortController();
   const button = $("#refresh"); button.classList.add("loading"); button.disabled = true;
+  document.body.classList.add("is-updating");
+  document.body.setAttribute("aria-busy", "true");
+  updateExportAvailability();
   try {
     const usageRequest = fetch(`/api/usage?range=${encodeURIComponent(state.range)}`, { cache: "no-store", signal: state.controller.signal });
     const contextRequest = state.range === "1"
@@ -589,10 +646,23 @@ async function refresh({ animate = false, notify = false } = {}) {
     if (error.name === "AbortError" || requestId !== state.requestId) return;
     document.body.classList.remove("is-loading");
     document.body.setAttribute("aria-busy", "false");
-    const notice = $("#notice"); notice.textContent = t("refreshFailed", { message:error.message }); notice.classList.remove("hidden");
+    const notice = $("#notice"); notice.textContent = `${t("refreshFailed", { message:error.message })} ${t("retryHint")}`; notice.classList.remove("hidden");
+    if (!state.data) {
+      $("#headerStatus").textContent = t("retryHint");
+      $("#costCoverage").textContent = t("waiting");
+    } else if (state.range !== state.data.range) {
+      // Retain the last verified view, including its selected/exported range.
+      state.range = state.data.range;
+      $("#rangeSlider").value = String(rangeValues.indexOf(state.range));
+      updateRangeUI();
+      updateExports();
+    }
     if (notify) showToast(t("refreshFailed", { message:error.message }));
   } finally {
     if (requestId === state.requestId) {
+      document.body.classList.remove("is-updating");
+      document.body.setAttribute("aria-busy", "false");
+      updateExportAvailability();
       button.classList.remove("loading"); button.disabled = false;
       state.nextRefresh = Date.now() + 30_000;
       clearTimeout(state.timer);
@@ -601,9 +671,39 @@ async function refresh({ animate = false, notify = false } = {}) {
   }
 }
 
-$("#rangeSlider").addEventListener("input", (event) => updateRangeUI(Number(event.currentTarget.value)));
-$("#rangeSlider").addEventListener("change", (event) => { const range = rangeValues[Number(event.currentTarget.value)]; if (range !== state.range) { state.range = range; refresh({ animate:true }); } });
+const rangeInput = $("#rangeSlider");
+function commitRange() {
+  const range = rangeValues[Number(rangeInput.value)];
+  if (range !== state.range) { state.range = range; refresh({ animate:true }); }
+}
+let rangePointer = null;
+function rangeAtPointer(event) {
+  const bounds = rangeInput.getBoundingClientRect();
+  // Match the four visible segments, rather than the native slider's endpoint spacing.
+  rangeInput.value = String(Math.max(0, Math.min(3, Math.floor((event.clientX - bounds.left) / bounds.width * 4))));
+  updateRangeUI(Number(rangeInput.value));
+}
+rangeInput.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || !event.isPrimary) return;
+  event.preventDefault();
+  rangePointer = event.pointerId;
+  rangeInput.setPointerCapture(event.pointerId);
+  rangeInput.focus({ preventScroll:true });
+  rangeAtPointer(event);
+});
+rangeInput.addEventListener("pointermove", (event) => { if (event.pointerId === rangePointer) rangeAtPointer(event); });
+rangeInput.addEventListener("pointerup", (event) => {
+  if (event.pointerId !== rangePointer) return;
+  rangeAtPointer(event);
+  rangePointer = null;
+  rangeInput.releasePointerCapture(event.pointerId);
+  commitRange();
+});
+rangeInput.addEventListener("pointercancel", () => { rangePointer = null; rangeInput.value = String(rangeValues.indexOf(state.range)); updateRangeUI(); });
+rangeInput.addEventListener("input", () => updateRangeUI(Number(rangeInput.value)));
+rangeInput.addEventListener("change", commitRange);
 $$('[data-target]').forEach((button) => button.addEventListener("click", () => {
+  hideTooltip();
   navigationTarget = button.dataset.target;
   setActiveNavigation(navigationTarget);
   clearTimeout(navigationTimeout);
@@ -612,8 +712,11 @@ $$('[data-target]').forEach((button) => button.addEventListener("click", () => {
   document.getElementById(button.dataset.target).scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "start" });
 }));
 $("#refresh").addEventListener("click", () => refresh({ animate:true, notify:true }));
-$("#themeToggle").addEventListener("click", () => { state.theme = state.theme === "dark" ? "light" : "dark"; localStorage.setItem("codex-meter:theme", state.theme); applyPreferences({ rerender:true }); showToast(t("themeChanged", { theme:t(state.theme === "dark" ? "themeDark" : "themeLight") })); });
-$("#localeToggle").addEventListener("click", () => { state.locale = state.locale === "zh" ? "en" : "zh"; localStorage.setItem("codex-meter:locale", state.locale); applyPreferences({ rerender:true }); showToast(t("localeChanged")); });
+function savePreference(key, value) {
+  try { localStorage.setItem(`codex-meter:${key}`, value); } catch { /* Preferences still work when storage is unavailable. */ }
+}
+$("#themeToggle").addEventListener("click", () => { state.theme = state.theme === "dark" ? "light" : "dark"; savePreference("theme", state.theme); hideTooltip(); applyPreferences({ rerender:true }); showToast(t("themeChanged", { theme:t(state.theme === "dark" ? "themeDark" : "themeLight") })); });
+$("#localeToggle").addEventListener("click", () => { state.locale = state.locale === "zh" ? "en" : "zh"; savePreference("locale", state.locale); hideTooltip(); applyPreferences({ rerender:true }); showToast(t("localeChanged")); });
 window.addEventListener("resize", () => { scheduleScrollUpdate(); clearTimeout(state.resizeTimer); state.resizeTimer = setTimeout(() => { scheduleScrollUpdate(); if (state.data) { const timelineData = state.data.range === "1" && state.contextData?.daily?.length > 1 ? state.contextData : state.data; renderTrend(state.data); renderExtraAnalysis(state.data, timelineData); } }, 160); });
 
 function updateClock() {
@@ -624,10 +727,14 @@ function updateClock() {
 
 document.body.setAttribute("aria-busy", "true");
 document.addEventListener("click", (event) => {
+  if (!event.target.closest(".heat-cell[data-hour], .hover-target, .hourly-column")) hideTooltip();
   const menu = $("#headerExport");
   if (menu.open && !menu.contains(event.target)) menu.open = false;
 });
 document.addEventListener("keydown", (event) => { if (event.key === "Escape") { $("#headerExport").open = false; hideTooltip(); } });
-$$("[data-export], .export-actions a").forEach((link) => link.addEventListener("click", () => { $("#headerExport").open = false; showToast(t("exportStarted")); }));
+$$("[data-export], .export-actions a").forEach((link) => link.addEventListener("click", (event) => {
+  if (!state.data || document.body.classList.contains("is-updating")) { event.preventDefault(); showToast(t("loading")); return; }
+  $("#headerExport").open = false; showToast(t("exportStarted"));
+}));
 refresh({ animate:true });
 setInterval(updateClock, 1000);

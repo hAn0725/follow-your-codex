@@ -103,6 +103,36 @@ test("migrated usage records replace legacy mirrors with different cumulative ba
   assert.equal(parsed.total.cached, 80);
 });
 
+test("desktop usage recorded early is attributed to its own turn after a model switch", () => {
+  const usage = { input_tokens: 100, cached_input_tokens: 40, output_tokens: 20, total_tokens: 120 };
+  const timestamp = "2026-11-24T12:00:00Z";
+  const context = (turn_id, model) => ({ type: "turn_context", payload: { turn_id, model } });
+  const record = (turn_id, response_id, model) => ({
+    type: "token_usage_record", timestamp, payload: { turn_id, response_id, root_turn_id: turn_id, usage, model },
+  });
+  const early = record("sol-turn", "early");
+  const parsed = parseSessionText(jsonl([
+    { type: "session_meta", payload: { id: "work-thread", originator: "codex_work_desktop" } },
+    context("old-turn", "gpt-6.1-terra"),
+    record("old-turn", "old"),
+    early,
+    context("sol-turn", "gpt-6.2-sol"),
+    { type: "event_msg", timestamp, payload: { type: "token_count", info: { last_token_usage: usage } } },
+    early,
+    context("astra-turn", "gpt-6.2-astra"),
+    record("sol-turn", "late"),
+    record("astra-turn", "astra"),
+    record("missing-turn", "unattributed"),
+    record("reported-turn", "reported", "gpt-6.2-astra"),
+    context("reported-turn", "gpt-6.2-sol"),
+  ]));
+  assert.deepEqual(parsed.events.map((event) => event.model), [
+    "gpt-6.1-terra", "gpt-6.2-sol", "gpt-6.2-sol", "gpt-6.2-astra", "Unknown model", "gpt-6.2-astra",
+  ]);
+  assert.equal(parsed.total.total, 720);
+  assert.ok(parsed.events.every((event) => event.project === "Unknown project"));
+});
+
 test("scanner includes archives, deduplicates copies, and retains disjoint session segments", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-tracer-test-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

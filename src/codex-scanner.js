@@ -9,6 +9,7 @@ const { version } = require("../package.json");
 const { estimateCost, isExcludedExternalModel, resolvePrice } = require("./pricing");
 
 const TOKEN_FIELDS = ["input", "cached", "output", "reasoning", "total"];
+const CACHE_VERSION = 2;
 
 function finiteNumber(value, fallback = 0) {
   const number = Number(value);
@@ -95,6 +96,8 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
   const responseIds = new Set();
   let turnId = "unknown-turn";
   const modernTurns = new Set();
+  const turnContexts = new Map();
+  const pendingTurnUsage = new Map();
 
   for (const line of text.split(/\r?\n/)) {
     if (!line.trim()) continue;
@@ -120,6 +123,19 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
       if (typeof payload.turn_id === "string" && payload.turn_id) turnId = payload.turn_id;
       if (typeof payload.model === "string" && payload.model) model = payload.model;
       if (typeof payload.cwd === "string" && payload.cwd) project = safeBasename(payload.cwd);
+      if (typeof payload.turn_id === "string" && payload.turn_id) {
+        const context = {
+          model: typeof payload.model === "string" && payload.model ? payload.model : "Unknown model",
+          project,
+        };
+        turnContexts.set(turnId, context);
+        // The desktop can persist a usage record before its turn context.
+        for (const event of pendingTurnUsage.get(turnId) || []) {
+          if (event.model === "Unknown model") event.model = context.model;
+          event.project = context.project;
+        }
+        pendingTurnUsage.delete(turnId);
+      }
       continue;
     }
     const modernUsage = record.type === "token_usage_record";
@@ -127,25 +143,38 @@ function parseSessionText(text, filePath = "session.jsonl", fallbackMs = Date.no
 
     // Retain compatibility if a newer Codex log supplies the model directly
     // on the usage event rather than only in a preceding turn context record.
-    if (typeof payload.model === "string" && payload.model) model = payload.model;
+    const reportedModel = typeof payload.model === "string" && payload.model ? payload.model : null;
 
     const timestamp = parseTimestamp(record.timestamp, fallbackMs);
     const info = payload.info && typeof payload.info === "object" ? payload.info : {};
     // Modern thread totals and legacy totals can use different baselines.
     // Prefer per-response records for each migrated turn instead of mixing them.
     const responseId = modernUsage && typeof payload.response_id === "string" ? payload.response_id : null;
-    if (responseId && responseIds.has(responseId)) continue;
-    if (responseId) responseIds.add(responseId);
     if (modernUsage) {
       const usage = readUsage(payload.usage);
       if (hasUsage(usage)) {
-        const key = payload.turn_id || turnId;
+        if (responseId && responseIds.has(responseId)) continue;
+        if (responseId) responseIds.add(responseId);
+        const explicitTurn = typeof payload.turn_id === "string" && payload.turn_id ? payload.turn_id : null;
+        const key = explicitTurn || turnId;
+        const context = explicitTurn && turnContexts.get(explicitTurn);
         modernTurns.add(key);
-        events.push({ timestamp, model, project, sessionId, usage, turnId: key, modern: true,
-          ...(responseId ? { responseId } : {}) });
+        const event = {
+          timestamp,
+          model: reportedModel || context?.model || (explicitTurn ? "Unknown model" : model),
+          project: context?.project || project,
+          sessionId, usage, turnId: key, modern: true,
+          ...(responseId ? { responseId } : {}),
+        };
+        events.push(event);
+        if (explicitTurn && !context) {
+          if (!pendingTurnUsage.has(key)) pendingTurnUsage.set(key, []);
+          pendingTurnUsage.get(key).push(event);
+        }
       }
       continue;
     }
+    if (reportedModel) model = reportedModel;
     const currentTotal = readUsage(info.total_token_usage);
     const lastUsage = readUsage(info.last_token_usage);
     let usage = null;
@@ -252,7 +281,7 @@ class CodexScanner {
     if (!this.cacheFile) return;
     try {
       const saved = JSON.parse(fs.readFileSync(this.cacheFile, "utf8"));
-      if (saved.version !== 1 || saved.codexHome !== this.codexHome || !Array.isArray(saved.files)) return;
+      if (saved.version !== CACHE_VERSION || saved.codexHome !== this.codexHome || !Array.isArray(saved.files)) return;
       for (const item of saved.files) {
         if (typeof item.path === "string" && Number.isFinite(item.size) && Number.isFinite(item.mtimeMs)
             && Number.isFinite(item.ctimeMs) && validCachedSession(item.parsed, item.path)) {
@@ -271,7 +300,7 @@ class CodexScanner {
     try {
       fs.mkdirSync(path.dirname(this.cacheFile), { recursive:true });
       const files = [...this.cache].map(([filePath, entry]) => ({ path:filePath, ...entry }));
-      fs.writeFileSync(temporary, JSON.stringify({ version:1, codexHome:this.codexHome, files }), { mode:0o600 });
+      fs.writeFileSync(temporary, JSON.stringify({ version:CACHE_VERSION, codexHome:this.codexHome, files }), { mode:0o600 });
       fs.renameSync(temporary, this.cacheFile);
       return true;
     } catch {
