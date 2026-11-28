@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-27T08:00:00.000Z",
+  "title": "Design System: Codex Meter",
+  "extensions": {
+    "colorMeta": {
+      "chart-highlight": {
+        "role": "accent",
+        "displayName": "Trend highlight"
+      },
+      "chart-ink": {
+        "role": "surface",
+        "displayName": "Feature charcoal"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Report headline",
+        "purpose": "Introductory heading above the feature."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay",
+        "value": "0 8px 24px rgb(20 20 20 / .15)",
+        "purpose": "Separate menus and tooltips from report content."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(.2,.8,.2,1)",
+        "purpose": "Range selection and UI feedback."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "toolbar-condensed",
+        "value": "1120px"
+      },
+      {
+        "name": "report-stacked",
+        "value": "872px"
+      },
+      {
+        "name": "daily-details-condensed",
+        "value": "760px"
+      },
+      {
+        "name": "mobile",
+        "value": "600px"
+      },
+      {
+        "name": "compact-mobile",
+        "value": "370px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Runs a refresh from the masthead.",
+      "html": "<button class=\"ds-sync\">Sync</button>",
+      "css": ".ds-sync { min-height: 40px; padding: 7px 12px; border: 1px solid var(--ink,#222220); border-radius: 7px; color: var(--bg,#f8f8f8); background: var(--ink,#222220); font: 600 13px 'Segoe UI Variable Text','Segoe UI',sans-serif; cursor: pointer; transition: opacity .16s; } .ds-sync:hover { opacity: .8; } .ds-sync:focus-visible { outline: 2px solid var(--focus,#4b6520); outline-offset: 3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "An editorial usage report",
+    "overview": "The page title shares a baseline with sync status above the charcoal report. The Token and cost trend shares the report with total usage. Rules and right-aligned figures organize the detailed data.",
+    "keyCharacteristics": [
+      "Paper gray canvas",
+      "Installed UI fonts and tabular figures",
+      "Charcoal feature with a pale lime trend"
+    ],
+    "rules": [
+      {
+        "name": "One featured trend",
+        "body": "Save the highlight for the main time series and its key.",
+        "section": "colors"
+      },
+      {
+        "name": "Shared edges",
+        "body": "Align the masthead, report and data sections to the same page gutters.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "Keep quota and chart labels readable in both themes."
+    ],
+    "donts": [
+      "Avoid decorative charts or unfamiliar navigation controls."
+    ]
+  }
+}

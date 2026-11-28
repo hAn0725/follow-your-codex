@@ -26,9 +26,9 @@ const translations = {
     providerTitle:"Provider billing", providerSub:"Costs, currencies, and GPT usage stay separate. Currencies are never combined.", separateBilling:"Separate cost", token:"Token", modelUsage:"No priced models detected", trendTitle:"Token trend", dailyTotal:"Daily total", hoverDetail:"Hover for detail", tokenMix:"Token mix", total:"Total", uncachedInput:"Uncached input", cachedInput:"Cached input", reasoningOutput:"of which: reasoning output", trendsTitle:"Trend analysis", trendsSub:"Find your most-used days and hours", heatTitle:"Activity heatmap", heatHint:"Darker cells mean more Token usage", projectPie:"Project share", projectPieSub:"Top ten shown separately; the rest are grouped", cacheTrend:"Daily cache hit rate", cacheHint:"Cached input ÷ all input · days without input are blank", ioTitle:"Input and output", ioSub:"Selected range · cache is part of input, reasoning is part of output", cumulative:"Cumulative usage", cumulativeHint:"Cumulative by day in this range · hover for values", weekly:"Weekly usage", localAggregate:"Aggregated in local time", efficiency:"Model cache efficiency", efficiencySub:"Cache hit rate, cached volume, and separately estimated cost per model", daily:"Daily detail", dailySub:"Input, cache, output, and usage events", dataTitle:"Data & export", dataSub:"Verifiable, portable, never uploaded", pricingTitle:"How is the estimated cost calculated?", exportTitle:"Export this range", exportSub:"CSV for analysis, Markdown for archives, JSON for the full structure.", sourceTitle:"Local Codex session metadata", sourceEmpty:"Waiting to scan", localEstimate:"Local estimate", other:"Other", noUsage:"No usage in this range", noRank:"No ranking data in this range", noProject:"No project usage in this range", noInput:"No input usage in this range", noModel:"No model usage", recentActive:"Latest {n} active days", noDaily:"No daily usage records in this range", activeDay:"Active days", dailyUsage:"Daily average", cacheReuse:"Cache reuse", noOutput:"No output", inputOutput:"Input / output {n} : 1", everyOutput:"Every output Token corresponds to {n} input Token", priceUnavailable:"No public API price", localFile:"Refreshed {time} · {count} local session files", refreshFailed:"Read failed: {message}", noFiles:"No Codex session records found in {path}. You can also use --codex-home to choose another directory.", autoRefresh:"Last sync {time} · refreshes in {seconds}s", recentReference:"Recent 7-day reference · ", tooltipTotal:"Total", events:"{n} events", cacheRate:"Cache hit rate", all:"All", weekday:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
   }
 };
-const state = { range:"30", data:null, contextData:null, timer:null, resizeTimer:null, requestId:0, nextRefresh:0, locale:document.documentElement.lang === "en" ? "en" : "zh", theme:document.documentElement.dataset.theme || "light", motion:false };
-Object.assign(translations.zh, { capacityTitle:"Codex 额度状态", tokenUsage:"Codex Token 用量", date:"日期", eventCount:"事件", costNote:"计价说明", overview:"概览", privacyCompact:"仅本地读取", overviewTitle:"使用概览", overviewSub:"用量、费用与额度。", trendsSub:"活跃时间与项目占比。", dataSub:"本地读取，可导出。", pricingTitle:"金额如何估算？", pricingScope:"仅统计 GPT / Codex；输入、缓存与输出分别计价。", pricingUnknown:"Unknown model 保留用量，但不计入金额。自动审查采用 GPT-5.3-Codex 代理估算。", unknownModel:"未识别模型", unknownModelInfo:"仅计入用量，未计价", proxyEstimate:"代理估算" });
-Object.assign(translations.en, { capacityTitle:"Codex capacity", tokenUsage:"Codex Token usage", date:"Date", eventCount:"Events", costNote:"Pricing notes", overview:"Overview", privacyCompact:"Local only", overviewTitle:"Usage at a glance", overviewSub:"Usage, cost, capacity.", trendsSub:"Activity times and project share.", dataSub:"Local, exportable, private.", pricingTitle:"How is cost estimated?", pricingScope:"Only GPT / Codex is counted; input, cache, and output are priced separately.", pricingUnknown:"Unknown models keep verified usage but no cost. Auto review uses a GPT-5.3-Codex proxy estimate.", unknownModel:"Unidentified model", unknownModelInfo:"Usage only, not priced", proxyEstimate:"Proxy estimate" });
+const state = { range:"30", data:null, contextData:null, timer:null, resizeTimer:null, requestId:0, nextRefresh:0, locale:document.documentElement.lang === "en" ? "en" : "zh", theme:document.documentElement.dataset.theme || "light", motion:false, trendMetric:"tokens" };
+Object.assign(translations.zh, { capacityTitle:"Codex 额度状态", tokenUsage:"Codex Token 用量", date:"日期", eventCount:"事件", costNote:"计价说明", overview:"概览", privacyCompact:"仅本地读取", overviewTitle:"使用概览", overviewSub:"用量、费用与额度。", trendsSub:"活跃时间与项目占比。", dataSub:"本地读取，可导出。", pricingTitle:"金额如何估算？", pricingScope:"输入、缓存与输出分别计价。", pricingUnknown:"有模型名但缺少单价的记录仅计入用量。自动审查采用 GPT-5.3-Codex 代理估算。", unknownModel:"未配置单价的模型", unknownModelInfo:"仅计入用量，未计价", proxyEstimate:"代理估算" });
+Object.assign(translations.en, { capacityTitle:"Codex capacity", tokenUsage:"Codex Token usage", date:"Date", eventCount:"Events", costNote:"Pricing notes", overview:"Overview", privacyCompact:"Local only", overviewTitle:"Usage at a glance", overviewSub:"Usage, cost, capacity.", trendsSub:"Activity times and project share.", dataSub:"Local, exportable, private.", pricingTitle:"How is cost estimated?", pricingScope:"Input, cached input, and output are priced separately.", pricingUnknown:"Named models without a configured rate show usage only. Auto review uses a GPT-5.3-Codex proxy estimate.", unknownModel:"Models without a configured rate", unknownModelInfo:"Usage only, not priced", proxyEstimate:"Proxy estimate" });
 Object.assign(translations.zh, { brandSubtitle:"本地用量工作台", pageTitle:"用量工作台", tokenUsage:"Token 用量", overviewTitle:"使用概览", overviewSub:"了解每一份用量的去向。", capacityTitle:"Codex 额度", localUsage:"本地记录", gptPriced:"已估算 {n} Token", apiValue:"API 等值费用", sync:"同步", classicVersion:"经典版", exportShort:"导出", exportSpreadsheet:"表格", exportDocument:"文档", exportData:"数据", syncSuccess:"用量已更新", exportStarted:"正在准备导出", themeChanged:"已切换为{theme}模式", localeChanged:"已切换为中文", projection:"30 日用量预估", noComparison:"无上一周期数据", pricingTitle:"计价说明" });
 Object.assign(translations.en, { brandSubtitle:"Local usage workspace", pageTitle:"Usage workspace", tokenUsage:"Token usage", overviewTitle:"Overview", overviewSub:"A clear view of where your usage goes.", capacityTitle:"Codex capacity", localUsage:"Local records", gptPriced:"{n} tokens estimated", apiValue:"API equivalent", sync:"Sync", classicVersion:"Classic view", exportShort:"Export", exportSpreadsheet:"Spreadsheet", exportDocument:"Document", exportData:"Data", syncSuccess:"Usage updated", exportStarted:"Preparing export", themeChanged:"Switched to {theme} mode", localeChanged:"Switched to English", projection:"30-day projection", noComparison:"No prior period data", pricingTitle:"Pricing notes" });
 
@@ -40,11 +40,24 @@ Object.assign(translations.en, { hourlyTitle:"Usage by hour", hourlyHint:"Select
 Object.assign(translations.zh, { scanIncomplete:"{n} 个历史文件读取失败，统计可能不完整。", zstdUnavailable:"{n} 个压缩历史文件尚未读取，请使用 Node.js 24+。" });
 Object.assign(translations.en, { scanIncomplete:"{n} history files could not be read; totals may be incomplete.", zstdUnavailable:"{n} compressed history files need Node.js 24+ to be read." });
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+Object.assign(translations.zh, {
+  usageTrend:"用量趋势", trendMetric:"趋势指标", trendCost:"费用", costTrend:"API 等值费用趋势",
+  costUnit:"API 等值 · USD", costPartial:"未定价用量不计入费用", noPricedUsage:"此范围内没有可估算费用的用量",
+  estimatedUsd:"估算 USD", dailyExpandHint:"展开日期，查看各模型的用量与费用。",
+  dailyModel:"模型", dailyTotalTokens:"总 Token", paceAhead:"比匀速多用 {n} 个百分点", paceBehind:"比匀速少用 {n} 个百分点",
+  paceEven:"接近匀速", windowElapsed:"采样时窗口已过 {n}%",
+});
+Object.assign(translations.en, {
+  usageTrend:"Usage trend", trendMetric:"Trend metric", trendCost:"Cost", costTrend:"API-equivalent cost trend",
+  costUnit:"API equivalent · USD", costPartial:"Unpriced usage excluded from cost", noPricedUsage:"No usage with a configured price in this range",
+  estimatedUsd:"Est. USD", dailyExpandHint:"Expand a date to see usage and estimated cost by model.",
+  dailyModel:"Model", dailyTotalTokens:"Total tokens", paceAhead:"{n} pp above even pace", paceBehind:"{n} pp below even pace",
+  paceEven:"Near even pace", windowElapsed:"{n}% of window elapsed at sample",
+});
 const t = (key, values = {}) => String(translations[state.locale]?.[key] ?? translations.zh[key] ?? key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
 const weekdays = () => translations[state.locale].weekday;
 
 const iconPaths = {
-  home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   trend: '<path d="M3 19V5m0 14h18M6 14l5-5 4 3 6-8m-5 0h5v5"/>',
   sessions: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M9 3v18m4-12h3m-3 5h3"/>',
   data: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/>',
@@ -52,9 +65,9 @@ const iconPaths = {
   ring: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M16 3.9A9 9 0 0 1 20.1 8H16z"/>',
   refresh: '<path d="M20 7a9 9 0 0 0-15-1L3 9m0-5v5h5m-4 8a9 9 0 0 0 15 1l2-3m0 5v-5h-5"/>',
   theme: '<path d="M12 3a9 9 0 1 0 0 18z"/><circle cx="12" cy="12" r="9"/>',
+  chevron: '<path d="m9 6 6 6-6 6"/>',
 };
 function icon(name) { return `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`; }
-$$(".sidebar nav button > span").forEach((span) => { span.innerHTML = icon({overview:"home",trends:"trend","data-source":"data"}[span.parentElement.dataset.target]); });
 $("#refresh > span").innerHTML = icon("refresh");
 $("#themeToggle > span").innerHTML = icon("theme");
 $(".source-icon").innerHTML = icon("data");
@@ -64,8 +77,8 @@ $$(".trend-panel h2, .heat-panel h3, .mix-panel h2, .daily-panel h3").forEach((h
 });
 
 const staticCopy = {
-  ".usage-hero .section-heading h2":"tokenUsage", ".usage-hero .section-heading .eyebrow":"overview", ".quota-hero .section-heading h2":"capacityTitle", ".hero-label":"cumulative", ".cost-line span:last-child":"apiValue", ".hero-breakdown a":"costNote", ".metrics-grid article:nth-child(1)>span":"todayUse", ".metrics-grid article:nth-child(2)>span":"dailyAverage", ".metrics-grid article:nth-child(3)>span":"cacheHit", ".metrics-grid article:nth-child(4)>span":"activeDays", ".trend-panel h2":"trendTitle", ".trend-panel .legend span:first-child":"dailyTotal", "#trendHint":"hoverDetail", ".mix-panel h2":"tokenMix", "#donut span":"total", ".trend-panel + .mix-panel":null,
-  ".section-title-row h2":"trendsTitle", ".section-title-row > p":"trendsSub", ".heat-panel h3":"heatTitle", "#heatHint":"heatHint", ".project-pie-panel h3":"projectPie", ".project-pie-panel p":"projectPieSub", ".extra-analysis > article:nth-child(1) h3":"cacheTrend", ".extra-analysis > article:nth-child(1) p":"cacheHint", ".extra-analysis > article:nth-child(2) h3":"ioTitle", ".extra-analysis > article:nth-child(2) p":"ioSub", ".cumulative-panel h3":"cumulative", ".weekly-pattern-heading span":"weekly", ".weekly-pattern-heading small":"localAggregate", ".extra-analysis > article:nth-child(4) h3":"efficiency", ".extra-analysis > article:nth-child(4) p":"efficiencySub", ".daily-panel h3":"daily", ".daily-panel p":"dailySub", ".daily-panel th:nth-child(1)":"date", ".daily-panel th:nth-child(2)":"total", ".daily-panel th:nth-child(3)":"input", ".daily-panel th:nth-child(4)":"cached", ".daily-panel th:nth-child(5)":"output", ".daily-panel th:nth-child(6)":"eventCount", "#data-title":"dataTitle", "#data-title + p":"dataSub", ".pricing-note h3":"pricingTitle", ".pricing-note p:nth-of-type(1)":"pricingScope", ".pricing-note p:nth-of-type(2)":"pricingUnknown", ".export-card h3":"exportTitle", ".export-card p":"exportSub", ".source-card h3":"sourceTitle", "#footerStatus":"sourceEmpty"
+  ".usage-hero .section-heading h2":"tokenUsage", ".quota-hero .section-heading h2":"capacityTitle", ".cost-line span:last-child":"apiValue", ".hero-breakdown a":"costNote", ".metrics-grid article:nth-child(1)>span":"todayUse", ".metrics-grid article:nth-child(2)>span":"dailyAverage", ".metrics-grid article:nth-child(3)>span":"cacheHit", ".metrics-grid article:nth-child(4)>span":"activeDays", ".trend-panel h2":"usageTrend", ".mix-panel h2":"tokenMix", "#donut span":"total",
+  "#trends-title":"trendsTitle", "#trends .section-title-row > p":"trendsSub", ".heat-panel h3":"heatTitle", "#heatHint":"heatHint", ".project-pie-panel h3":"projectPie", ".project-pie-panel p":"projectPieSub", ".extra-analysis > article:nth-child(1) h3":"cacheTrend", ".extra-analysis > article:nth-child(1) p":"cacheHint", ".extra-analysis > article:nth-child(2) h3":"ioTitle", ".extra-analysis > article:nth-child(2) p":"ioSub", ".cumulative-panel h3":"cumulative", ".weekly-pattern-heading span":"weekly", ".weekly-pattern-heading small":"localAggregate", ".extra-analysis > article:nth-child(4) h3":"efficiency", ".extra-analysis > article:nth-child(4) p":"efficiencySub", ".daily-panel h3":"daily", "#data-title":"dataTitle", ".pricing-note h3":"pricingTitle", ".pricing-note p:nth-of-type(1)":"pricingScope", ".pricing-note p:nth-of-type(2)":"pricingUnknown", ".export-card h3":"exportTitle", ".export-card p":"exportSub", ".source-card h3":"sourceTitle", "#footerStatus":"sourceEmpty"
 };
 function setStaticCopy() {
   Object.entries(staticCopy).forEach(([selector, key]) => {
@@ -113,7 +126,8 @@ function applyPreferences({ rerender = false } = {}) {
   }
   if (rerender && state.data) render(state.data);
 }
-translations.zh.privacyCompact = "仅本地处理";
+Object.assign(translations.zh, { privacyCompact:"仅本地处理", pageTitle:"Codex 用量", navOverview:"概览", openaiPricing:"OpenAI 定价", heatHint:"按星期与小时查看 Token 用量" });
+Object.assign(translations.en, { pageTitle:"Codex usage", openaiPricing:"OpenAI pricing", heatHint:"Token usage by weekday and hour" });
 Object.assign(translations.zh, { cumulativeValue:"累计", retryHint:"请检查本地服务后点击同步重试。", chartKeyboard:"方向键查看，Tab 离开图表" });
 Object.assign(translations.en, { cumulativeValue:"Cumulative", retryHint:"Check the local service and sync to retry.", chartKeyboard:"Arrow keys to explore, Tab to leave chart" });
 applyPreferences();
@@ -214,27 +228,78 @@ function enableChartNavigation(container, selector, columns = 1) {
     });
   });
 }
-const countFrames = new WeakMap();
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+function playMotion(node, frames, duration, delay = 0) {
+  if (reducedMotion.matches) return;
+  const animation = node.animate(frames, {
+    duration, delay, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards",
+  });
+  animation.id = "codex-meter";
+}
+
 function setCount(selector, value, formatter = formatNumber) {
-  const node = $(selector); const previous = Number(node.dataset.value ?? value); const next = Number(value) || 0;
-  if (countFrames.has(node)) cancelAnimationFrame(countFrames.get(node));
-  countFrames.delete(node);
-  node.dataset.value = String(next);
-  if (!state.motion || window.matchMedia("(prefers-reduced-motion: reduce)").matches || previous === next) { node.textContent = formatter(next); return; }
-  const started = performance.now(); const duration = 430;
-  const tick = (now) => {
-    const progress = Math.min(1, (now - started) / duration);
-    const eased = 1 - Math.pow(1 - progress, 4);
-    node.textContent = formatter(previous + (next - previous) * eased);
-    if (progress < 1) countFrames.set(node, requestAnimationFrame(tick));
-    else countFrames.delete(node);
-  };
-  countFrames.set(node, requestAnimationFrame(tick));
+  const node = $(selector);
+  const text = formatter(Number(value) || 0);
+  if (text === node.textContent) return;
+  node.getAnimations().filter((animation) => animation.id === "codex-meter").forEach((animation) => animation.cancel());
+  node.textContent = text;
+  if (state.motion) playMotion(node, [{ opacity: .6, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], 320);
 }
+
+const trace = [{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0)" }];
+const grow = [{ opacity: .45, transform: "scaleY(.12)" }, { opacity: 1, transform: "scaleY(1)" }];
+const rise = [{ opacity: .35, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }];
+const chartMotion = [
+  { root: $("#trendChart"), marks: ".plot-data", frames: trace, duration: 680 },
+  { root: $("#cumulativeChart"), marks: ".trend-line", frames: trace, duration: 560 },
+  { root: $("#hourlyChart"), marks: ".hourly-fill", frames: grow, duration: 440, stagger: 5 },
+  { root: $("#weeklyPattern"), marks: ".weekday-bar rect", frames: grow, duration: 430, stagger: 20 },
+  { root: $("#cacheTrend"), marks: ".cache-bars", frames: grow, duration: 440 },
+  { root: $("#limits"), marks: ".progress > span", frames: [{ transform: "scaleX(.05)" }, { transform: "scaleX(1)" }], duration: 440, stagger: 60, once: true },
+  { root: $("#projectPie"), marks: "svg", frames: [{ opacity: .45, transform: "scale(.93)" }, { opacity: 1, transform: "scale(1)" }], duration: 420 },
+  { root: $(".mix-body"), marks: "#donut, .mix-legend", frames: rise, duration: 420, stagger: 60 },
+];
+
+function animateChart(chart) {
+  chart.root.querySelectorAll(chart.marks).forEach((mark, index) => {
+    playMotion(mark, chart.frames, chart.duration, index * (chart.stagger || 0));
+  });
+}
+
+const chartsPlayed = new WeakSet();
+const chartObserver = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue;
+    chartObserver.unobserve(entry.target);
+    chartsPlayed.add(entry.target);
+    animateChart(chartMotion.find((chart) => chart.root === entry.target));
+  }
+}, { threshold: .15 });
+
 function animateVisuals() {
-  if (!state.motion || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  $$("#trendChart svg, #cacheTrend svg, #cumulativeChart svg, #weeklyPattern svg, #projectPie svg").forEach((svg) => svg.animate([{ opacity:.35 }, { opacity:1 }], { duration:220, easing:"ease-out" }));
+  if (reducedMotion.matches) return;
+  for (const chart of chartMotion) {
+    if (!chart.root.querySelector(chart.marks)) continue;
+    if (!chartsPlayed.has(chart.root)) {
+      chartObserver.observe(chart.root);
+    } else if (state.motion && !chart.once) {
+      const bounds = chart.root.getBoundingClientRect();
+      if (bounds.top < innerHeight && bounds.bottom > $(".topbar").getBoundingClientRect().bottom) animateChart(chart);
+    }
+  }
 }
+
+reducedMotion.addEventListener("change", () => {
+  if (!reducedMotion.matches) {
+    animateVisuals();
+    return;
+  }
+  chartObserver.disconnect();
+  document.getAnimations()
+    .filter((animation) => animation.id === "codex-meter")
+    .forEach((animation) => animation.cancel());
+});
 let toastTimer;
 function showToast(message) {
   const toast = $("#toast");
@@ -251,8 +316,6 @@ function renderSummary(data) {
   $("#rangeLabel").textContent = data.range === "1" ? t("last24Hours") : data.range === "all" ? t("allHistory") : t("recent", { n:data.range });
   $("#costCoverage").textContent = gptCost.pricedTokens ? t("gptPriced", { n:formatNumber(gptCost.pricedTokens) }) : t("noGpt");
   $("#costParts").textContent = `GPT / Codex: ${t("input")} $${(gptCost.input ?? data.cost.inputUsd).toFixed(2)} · ${t("cached")} $${(gptCost.cached ?? data.cost.cachedUsd).toFixed(2)} · ${t("output")} $${(gptCost.output ?? data.cost.outputUsd).toFixed(2)}` + (data.cost.unknownModels.length ? ` · ${t("unknownModel")}：${t("unknownModelInfo")}` : "");
-  const recent = data.daily.slice(-7), peak = Math.max(1, ...recent.map((d) => d.usage.total));
-  $("#miniBars").innerHTML = recent.map((d) => `<i style="height:${Math.max(2, d.usage.total / peak * 100)}%" title="${d.date} · ${formatFull(d.usage.total)} Token"></i>`).join("");
   setCount("#totalTokens", data.totals.total);
   setCount("#todayTokens", data.today.total);
   setCount("#averageTokens", data.insights.averagePerDay);
@@ -282,14 +345,16 @@ function renderSummary(data) {
 function renderLimits(data) {
   const latest = data.latestLimits;
   const rows = latest ? [
-    { label: windowLabel(latest.primary, t("shortWindow")), value: latest.primary, type: "short" },
-    { label: windowLabel(latest.secondary, t("longWindow")), value: latest.secondary, type: "long" },
+    { label: windowLabel(latest.primary, t("shortWindow")), value: latest.primary, type: "short", pace: data.quotaPace?.primary },
+    { label: windowLabel(latest.secondary, t("longWindow")), value: latest.secondary, type: "long", pace: data.quotaPace?.secondary },
   ].filter((item) => item.value) : [];
-  $("#limits").innerHTML = rows.length ? rows.map(({ label, value, type }) => {
+  $("#limits").innerHTML = rows.length ? rows.map(({ label, value, type, pace }) => {
     const severity = value.usedPercent >= 90 ? "danger" : value.usedPercent >= 70 ? "warn" : "";
     const remaining = Math.max(0, 100 - value.usedPercent);
     const resetLabel = resetTimeLabel(value.resetsAt, type);
-    return `<div class="quota-card"><div class="quota-head"><span>${escapeHtml(label)}</span><strong data-remaining="${t("remaining")}">${remaining.toFixed(1)}%</strong></div><div class="quota-meta"><span>${value.usedPercent.toFixed(1)}% ${t("used")}</span><span>${escapeHtml(resetLabel)} ${t("reset")}</span></div><div class="progress battery ${severity}" role="progressbar" aria-label="${escapeHtml(label)} ${t("remaining")}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${remaining.toFixed(1)}"><span style="margin-left:${value.usedPercent}%;width:${remaining}%"></span></div></div>`;
+    const paceStatus = pace ? t(pace.delta > 1 ? "paceAhead" : pace.delta < -1 ? "paceBehind" : "paceEven", { n:Math.abs(pace.delta).toFixed(1) }) : "";
+    const paceLine = pace ? `<div class="quota-pace"><span>${t("windowElapsed", { n:pace.elapsedPercent.toFixed(1) })}</span><strong>${paceStatus}</strong></div>` : "";
+    return `<div class="quota-card"><div class="quota-head"><span>${escapeHtml(label)}</span><strong data-remaining="${t("remaining")}">${remaining.toFixed(1)}%</strong></div><div class="quota-meta"><span>${value.usedPercent.toFixed(1)}% ${t("used")}</span><span>${escapeHtml(resetLabel)} ${t("reset")}</span></div><div class="progress battery ${severity}" role="progressbar" aria-label="${escapeHtml(label)} ${t("remaining")}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${remaining.toFixed(1)}"><span style="margin-left:${value.usedPercent}%;width:${remaining}%"></span></div>${paceLine}</div>`;
   }).join("") : `<div class="quota-empty">${t("noLimits")}</div>`;
   $("#limitAge").textContent = latest ? `${relativeTime(latest.timestamp)} ${t("updated")}${latest.planType ? ` · ${latest.planType}` : ""}` : t("waiting");
   const context = data.latestContext;
@@ -319,52 +384,86 @@ function pathFromPoints(items) {
 
 function renderTrend(data) {
   const container = $("#trendChart");
-  const width = Math.max(280, container.clientWidth || 780);
-  const height = 292;
-  const pad = { top: 18, right: 14, bottom: 32, left: 54 };
+  const width = container.clientWidth || 780;
+  const height = container.clientHeight || 245;
+  const costMode = state.trendMetric === "cost";
+  const pad = { top: 12, right: 3, bottom: 22, left: costMode ? 54 : 46 };
   const isHourly = data.timeline?.granularity === "hour";
   const daily = isHourly ? data.timeline.buckets : data.daily;
   const rowLabel = (item) => isHourly ? `${formatHour(item.startAt, true)} – ${formatHour(item.endAt, true)}` : item.date;
   $("#trendWindow").textContent = isHourly
     ? `${formatHour(data.timeline.startAt, true)} — ${formatHour(data.timeline.endAt, true)}`
     : daily.length ? `${formatDate(daily[0].date)} — ${formatDate(daily.at(-1).date)}` : t("noRecords");
-  $(".trend-panel .legend span:first-child").textContent = t(isHourly ? "hourlyTotal" : "dailyTotal");
-  $("#trendHint").textContent = t(isHourly ? "last24Hours" : "hoverDetail");
-  container.setAttribute("aria-label", t(isHourly ? "rollingChart" : "trendTitle"));
-  const totals = daily.map((item) => item.usage.total);
-  if (!daily.length || !totals.some(Boolean)) {
-    container.innerHTML = `<div class="empty">${t("noUsage")}</div>`;
+  $("#trendMode").disabled = false;
+  $("#trendHint").textContent = [
+    t(isHourly ? "hourlyTotal" : "dailyTotal"),
+    ...(costMode ? [t("costUnit")] : []),
+    ...(costMode && data.cost.unpricedTokens ? [t("costPartial")] : []),
+  ].join(" · ");
+  const chartLabel = t(costMode ? "costTrend" : isHourly ? "rollingChart" : "trendTitle");
+  container.setAttribute("aria-label", chartLabel);
+  const totals = daily.map((item) => costMode
+    ? (item.unpricedTokens && !item.pricedTokens ? null : item.estimatedUsd ?? 0)
+    : item.usage.total);
+  const hasData = costMode ? daily.some((item) => item.pricedTokens > 0) : totals.some(Boolean);
+  if (!hasData) {
+    container.innerHTML = `<div class="empty">${t(costMode && data.totals.total ? "noPricedUsage" : "noUsage")}</div>`;
     return;
   }
-  const max = Math.max(...totals, 1) * 1.12;
+  let max = totals.reduce((highest, value) => Math.max(highest, value ?? 0), costMode ? .04 : 1) * 1.12;
+  if (costMode) {
+    const rawStep = max / 4;
+    const scale = 10 ** Math.floor(Math.log10(rawStep));
+    max = [1, 2, 2.5, 5, 10].find((step) => step * scale >= rawStep) * scale * 4;
+  }
+  const axisLabel = (value) => costMode
+    ? `$${value < 1000 ? Number(value.toFixed(3)) : formatNumber(value)}`
+    : formatNumber(value);
   const points = chartPoints(totals, width, height, pad, max);
   if (isHourly) points.forEach((point, index) => {
     point.x = pad.left + (index + .5) / daily.length * (width - pad.left - pad.right);
   });
   const bottom = height - pad.bottom;
-  const labelEvery = Math.max(1, Math.ceil(daily.length / Math.max(2, Math.floor(width / 110))));
-  const labels = isHourly ? [0, 6, 12, 18, 24].map((hour) => {
+  const segments = [];
+  points.forEach((point, index) => {
+    if (totals[index] === null) return;
+    if (index === 0 || totals[index - 1] === null) segments.push([]);
+    segments.at(-1).push(point);
+  });
+  const tickCount = Math.min(daily.length, Math.max(2, Math.floor(width / 83)));
+  const labelIndices = Array.from({ length: tickCount }, (_, tick) => Math.round(tick * (daily.length - 1) / Math.max(1, tickCount - 1)));
+  const hours = width < 360 ? [0, 12, 24] : [0, 6, 12, 18, 24];
+  const labels = isHourly ? hours.map((hour) => {
     const x = pad.left + hour / 24 * (width - pad.left - pad.right);
     return `<text x="${x}" y="${height - 7}" text-anchor="${hour === 0 ? "start" : hour === 24 ? "end" : "middle"}">${formatHour(data.timeline.startAt + hour * 3_600_000)}</text>`;
-  }).join("") : daily.map((item, index) => index % labelEvery === 0 || index === daily.length - 1
-    ? `<text x="${points[index].x}" y="${height - 7}" text-anchor="${index === 0 ? "start" : index === daily.length - 1 ? "end" : "middle"}">${formatDate(item.date)}</text>` : "").join("");
-  container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="group" aria-label="${t(isHourly ? "rollingChart" : "trendTitle")}">
-    ${[0, .25, .5, .75, 1].map((tick) => { const y = pad.top + (1 - tick) * (height - pad.top - pad.bottom); return `<line class="grid-line" x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}"/><text x="${pad.left - 9}" y="${y + 4}" text-anchor="end">${formatNumber(max * tick)}</text>`; }).join("")}
+  }).join("") : labelIndices.map((index) =>
+    `<text x="${points[index].x}" y="${height - 7}" text-anchor="${index === 0 ? "start" : index === daily.length - 1 ? "end" : "middle"}">${formatDate(daily[index].date)}</text>`
+  ).join("");
+  container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="group" aria-label="${chartLabel}">
+    ${[0, .25, .5, .75, 1].map((tick) => { const y = pad.top + (1 - tick) * (height - pad.top - pad.bottom); return `<line class="grid-line" x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}"/><text x="${pad.left - 9}" y="${y + 4}" text-anchor="end">${axisLabel(max * tick)}</text>`; }).join("")}
     <defs><linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--chart-a)" stop-opacity=".18"/><stop offset="100%" stop-color="var(--chart-a)" stop-opacity=".01"/></linearGradient></defs>
-    <path fill="url(#curveFill)" d="${pathFromPoints(points)} L${points.at(-1).x},${bottom} L${points[0].x},${bottom} Z"/>
-    <path class="trend-line" d="${pathFromPoints(points)}"/>
+    <g class="plot-data">${segments.map((segment) => {
+      const first = segment[0], last = segment.at(-1);
+      if (segment.length === 1) return `<circle class="trend-sample" r="3" cx="${first.x}" cy="${first.y}"/>`;
+      const line = pathFromPoints(segment);
+      return `<path fill="url(#curveFill)" d="${line} L${last.x},${bottom} L${first.x},${bottom} Z"/><path class="trend-line" d="${line}"/>`;
+    }).join("")}</g>
     ${labels}
     <g id="hoverMarker" class="hidden"><line class="hover-guide" y1="${pad.top}" y2="${bottom}"/><circle class="hover-point" r="4"/></g>
     ${daily.map((item, index) => { const left = index === 0 ? pad.left : (points[index - 1].x + points[index].x) / 2; const right = index === daily.length - 1 ? width - pad.right : (points[index].x + points[index + 1].x) / 2; return `<rect class="hover-target" data-index="${index}" x="${left}" y="${pad.top}" width="${Math.max(2, right - left)}" height="${bottom - pad.top}"/>`; }).join("")}
   </svg>`;
   const marker = container.querySelector("#hoverMarker");
   container.querySelectorAll(".hover-target").forEach((target) => {
+    const index = Number(target.dataset.index);
+    const item = daily[index], point = points[index];
+    const valueLabel = costMode ? (totals[index] === null ? t("unpriced") : formatMoney(totals[index])) : `${formatFull(item.usage.total)} Token`;
     target.setAttribute("tabindex", "0");
-    target.setAttribute("aria-label", `${rowLabel(daily[Number(target.dataset.index)])} · ${formatFull(daily[Number(target.dataset.index)].usage.total)} Token`);
+    target.setAttribute("aria-label", `${rowLabel(item)} · ${valueLabel}`);
     const reveal = (event) => {
-      const index = Number(target.dataset.index); const item = daily[index]; const point = points[index];
       marker.classList.remove("hidden"); marker.querySelector("line").setAttribute("x1", point.x); marker.querySelector("line").setAttribute("x2", point.x); marker.querySelector("circle").setAttribute("cx", point.x); marker.querySelector("circle").setAttribute("cy", point.y);
-      showTooltip(event, `<b>${escapeHtml(rowLabel(item))}</b><span>${t("tooltipTotal")} ${formatFull(item.usage.total)}<br>${t("input")} ${formatFull(item.usage.input)} · ${t("cached")} ${formatFull(item.usage.cached)}<br>${t("output")} ${formatFull(item.usage.output)} · ${t("events", { n:item.events })}</span>`);
+      marker.querySelector("circle").classList.toggle("hidden", totals[index] === null);
+      const estimate = costMode ? `${t("estimatedUsd")} ${valueLabel}${item.unpricedTokens && item.pricedTokens ? ` · ${t("costPartial")}` : ""}<br>` : "";
+      showTooltip(event, `<b>${escapeHtml(rowLabel(item))}</b><span>${estimate}${t("tooltipTotal")} ${formatFull(item.usage.total)}<br>${t("input")} ${formatFull(item.usage.input)} · ${t("cached")} ${formatFull(item.usage.cached)}<br>${t("output")} ${formatFull(item.usage.output)} · ${t("events", { n:item.events })}</span>`);
     };
     target.addEventListener("mousemove", reveal);
     target.addEventListener("focus", reveal);
@@ -455,25 +554,85 @@ function renderProjectPie(data) {
       ? '<circle cx="120" cy="120" r="100"/>'
       : `<path d="M120 120 L${x1} ${y1} A100 100 0 ${end-angle>Math.PI?1:0} 1 ${x2} ${y2} Z"/>`;
     angle = end;
-    return `<g class="pie-slice" data-pie-index="${i}" fill="${colors[i]}" tabindex="0" role="img" aria-label="${escapeHtml(row.name)}，${(row.value/total*100).toFixed(1)}%"><title>${escapeHtml(row.name)} · ${formatFull(row.value)} Token · ${(row.value/total*100).toFixed(1)}%</title>${shape}</g>`;
+    return `<g class="pie-slice" fill="${colors[i]}" tabindex="0" role="img" aria-label="${escapeHtml(row.name)}，${(row.value/total*100).toFixed(1)}%"><title>${escapeHtml(row.name)} · ${formatFull(row.value)} Token · ${(row.value/total*100).toFixed(1)}%</title>${shape}</g>`;
   }).join("");
-  $("#projectPie").innerHTML = `<svg viewBox="0 0 240 240" aria-label="${t("projectPie")}">${slices}</svg>`;
+  const chart = $("#projectPie");
+  chart.innerHTML = `<svg viewBox="0 0 240 240" role="group" aria-label="${t("projectPie")}">${slices}</svg>`;
   $("#projectPieLegend").innerHTML = rows.map((row,i) => `<div class="pie-legend-row"><i style="background:${colors[i]}"></i><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span><b>${(row.value/total*100).toFixed(1)}%</b></div>`).join("");
-  $$(".pie-slice").forEach((slice) => {
-    const row = rows[Number(slice.dataset.pieIndex)];
-    const reveal = (event) => showTooltip(event,`<b>${escapeHtml(row.name)}</b><span>${formatFull(row.value)} Token · ${(row.value/total*100).toFixed(1)}%</span>`);
-    slice.addEventListener("mousemove",reveal);
-    slice.addEventListener("focus",reveal);
-    slice.addEventListener("mouseleave",hideTooltip);
-    slice.addEventListener("blur",hideTooltip);
+  const plot = chart.querySelector("svg");
+  const legend = $$("#projectPieLegend .pie-legend-row");
+  const chartSlices = [...chart.querySelectorAll(".pie-slice")];
+  let emphasized = -1;
+  function setEmphasis(index) {
+    if (index === emphasized) return;
+    chartSlices[emphasized]?.classList.remove("is-emphasized");
+    legend[emphasized]?.classList.remove("is-emphasized");
+    chartSlices[index]?.classList.add("is-emphasized");
+    legend[index]?.classList.add("is-emphasized");
+    plot.classList.toggle("is-inspecting", index !== -1);
+    emphasized = index;
+  }
+  chartSlices.forEach((slice, index) => {
+    const row = rows[index];
+    const reveal = (event) => {
+      setEmphasis(index);
+      showTooltip(event,`<b>${escapeHtml(row.name)}</b><span>${formatFull(row.value)} Token · ${(row.value/total*100).toFixed(1)}%</span>`);
+    };
+    const clear = () => {
+      if (emphasized !== index) return;
+      setEmphasis(-1);
+      hideTooltip();
+    };
+    slice.addEventListener("mousemove", reveal);
+    slice.addEventListener("focus", reveal);
+    slice.addEventListener("mouseleave", clear);
+    slice.addEventListener("blur", clear);
+    legend[index].addEventListener("mouseenter", reveal);
+    legend[index].addEventListener("mouseleave", clear);
   });
+  enableChartNavigation(chart, ".pie-slice");
 }
 
 function renderDaily(data) {
-  const rows = data.daily.filter((item) => item.usage.total > 0).slice().reverse().slice(0, 14);
+  const container = $("#dailyRows");
+  const openDates = new Set([...container.querySelectorAll(".daily-toggle[aria-expanded='true']")].map((button) => button.dataset.date));
+  const focusedDate = document.activeElement?.closest(".daily-toggle")?.dataset.date;
+  const rows = data.daily.filter((item) => item.usage.total > 0).slice(-14).reverse();
   $("#dailyCount").textContent = rows.length ? t("recentActive", { n:rows.length }) : t("noRecords");
-  $("#dailyRows").innerHTML = rows.length ? rows.map((item) => `<tr><td>${escapeHtml(item.date)}</td><td class="numeric"><b>${formatFull(item.usage.total)}</b></td><td class="numeric">${formatFull(item.usage.input)}</td><td class="numeric">${formatFull(item.usage.cached)}</td><td class="numeric">${formatFull(item.usage.output)}</td><td class="numeric">${formatFull(item.events)}</td></tr>`).join("") : `<tr><td colspan="6"><div class="empty">${t("noDaily")}</div></td></tr>`;
+  container.innerHTML = rows.length ? rows.map((item) => {
+    const date = escapeHtml(item.date);
+    const open = openDates.has(item.date);
+    const metrics = [["input", item.usage.input], ["cached", item.usage.cached], ["output", item.usage.output], ["eventCount", item.events]];
+    const price = item.pricedTokens ? formatMoney(item.estimatedUsd) : t("unpriced");
+    const models = (item.models || []).map((model) => `<tr><th scope="row">${escapeHtml(model.name)}</th><td class="numeric">${formatFull(model.usage.total)}</td><td class="numeric">${model.estimatedUsd === null ? t("unpriced") : formatMoney(model.estimatedUsd)}</td></tr>`).join("");
+    return `<tr class="daily-summary">
+      <th scope="row"><button class="daily-toggle" type="button" data-date="${date}" aria-expanded="${open}" aria-controls="day-${date}">${icon("chevron")}<time datetime="${date}">${date}</time></button></th>
+      <td class="numeric"><b>${formatFull(item.usage.total)}</b></td><td class="numeric">${price}</td>
+      ${metrics.map(([, value]) => `<td class="numeric daily-wide">${formatFull(value)}</td>`).join("")}
+    </tr><tr class="daily-detail" id="day-${date}"${open ? "" : " hidden"}><td colspan="7">
+      <dl class="daily-breakdown">${metrics.map(([label, value]) => `<div><dt>${t(label)}</dt><dd>${formatFull(value)}</dd></div>`).join("")}</dl>
+      <table class="daily-models" aria-label="${t("dailyModel")} · ${date}"><thead><tr><th scope="col">${t("dailyModel")}</th><th scope="col" class="numeric">Token</th><th scope="col" class="numeric">${t("estimatedUsd")}</th></tr></thead><tbody>${models}</tbody></table>
+    </td></tr>`;
+  }).join("") : `<tr><td colspan="7"><div class="empty">${t("noDaily")}</div></td></tr>`;
+  if (focusedDate) {
+    [...container.querySelectorAll(".daily-toggle")].find((button) => button.dataset.date === focusedDate)?.focus({ preventScroll:true });
+  }
 }
+
+$("#dailyRows").addEventListener("click", (event) => {
+  const toggle = event.target.closest(".daily-toggle");
+  if (!toggle) return;
+  const detail = document.getElementById(toggle.getAttribute("aria-controls"));
+  detail.hidden = !detail.hidden;
+  toggle.setAttribute("aria-expanded", String(!detail.hidden));
+});
+
+$("#trendMode").addEventListener("change", (event) => {
+  state.trendMetric = event.target.value;
+  hideTooltip();
+  renderTrend(state.data);
+  animateChart(chartMotion[0]);
+});
 
 function updateExports() {
   $$("[data-export]").forEach((link) => { link.href = `/api/export?range=${encodeURIComponent(state.range)}&format=${link.dataset.export}`; });
@@ -483,7 +642,7 @@ function updateExports() {
   $("#exportJson").href = `${base}&format=json`;
 }
 function updateExportAvailability() {
-  const disabled = !state.data || document.body.classList.contains("is-updating");
+  const disabled = !state.data || $("#refresh").disabled;
   $$("[data-export], .export-actions a").forEach((link) => link.setAttribute("aria-disabled", String(disabled)));
 }
 
@@ -494,7 +653,7 @@ function renderEfficiencyCharts(data) {
   const slot = (width-left-right) / Math.max(1,rows.length);
   $("#cacheTrend").innerHTML = !rows.some((row) => row.usage.input) ? `<div class="empty">${t("noInput")}</div>` : `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${t("cacheRate")}, 0 to 100 percent">
     ${[0,50,100].map((n) => `<line class="grid-line" x1="${left}" x2="${width-right}" y1="${bottom-n*1.6}" y2="${bottom-n*1.6}"/><text x="34" y="${bottom-n*1.6+4}" text-anchor="end">${n}%</text>`).join("")}
-    ${rows.map((row,i) => { const rate = row.usage.input ? Math.min(100,row.usage.cached/row.usage.input*100) : null; return rate === null ? "" : `<rect x="${left+i*slot+slot*.18}" y="${bottom-rate*1.6}" width="${slot*.64}" height="${Math.max(1,rate*1.6)}" rx="2" fill="var(--chart-a)" tabindex="0"><title>${row.date} · ${rate.toFixed(1)}% · ${t("cached")} ${formatFull(row.usage.cached)} / ${t("input")} ${formatFull(row.usage.input)}</title></rect>`; }).join("")}
+    <g class="cache-bars">${rows.map((row,i) => { const rate = row.usage.input ? Math.min(100,row.usage.cached/row.usage.input*100) : null; return rate === null ? "" : `<rect x="${left+i*slot+slot*.18}" y="${bottom-rate*1.6}" width="${slot*.64}" height="${Math.max(1,rate*1.6)}" rx="2" fill="var(--chart-a)" tabindex="0"><title>${row.date} · ${rate.toFixed(1)}% · ${t("cached")} ${formatFull(row.usage.cached)} / ${t("input")} ${formatFull(row.usage.input)}</title></rect>`; }).join("")}</g>
     <text x="${left}" y="213">${formatDate(rows[0].date)}</text><text x="${width-right}" y="213" text-anchor="end">${formatDate(rows.at(-1).date)}</text></svg>`;
   const total = data.totals.input + data.totals.output;
   const parts = [{label:t("input"),value:data.totals.input,color:"var(--chart-a)"},{label:t("output"),value:data.totals.output,color:"var(--chart-b)"}];
@@ -538,9 +697,9 @@ function renderExtraAnalysis(data, timelineData = data) {
   $("#modelShare").innerHTML = data.models.length ? data.models.map((row) => {
     const cacheRate = row.cacheRate;
     const unknown = row.pricingStatus === "unpriced";
-    const cost = unknown ? t("unknownModelInfo") : row.pricingStatus === "proxy" ? `≈ ${formatMoney(row.estimatedCost, row.currency)} · ${t("proxyEstimate")}` : formatMoney(row.estimatedCost, row.currency);
+    const cost = unknown ? "—" : row.pricingStatus === "proxy" ? `≈ ${formatMoney(row.estimatedCost, row.currency)} · ${t("proxyEstimate")}` : formatMoney(row.estimatedCost, row.currency);
     const provider = unknown ? t("unknownModelInfo") : `${row.provider}${row.pricingReference ? ` · ${row.pricingReference}` : ""}`;
-    const name = unknown && row.name === "Unknown model" ? t("unknownModel") : row.name;
+    const name = row.name;
     return `<div class="model-efficiency-row"><div class="model-efficiency-head"><div><span>${escapeHtml(name)}</span><small>${escapeHtml(provider)}</small></div><b>${cacheRate === null ? "—" : `${cacheRate.toFixed(1)}%`}</b></div><div class="rank-bar cache-rate"><span style="width:${cacheRate || 0}%"></span></div><div class="model-efficiency-meta"><span>${t("cached")} ${formatNumber(row.usage.cached)} / ${t("input")} ${formatNumber(row.usage.input)}</span><span>${formatNumber(row.usage.total)} Token</span><strong>${cost}</strong></div></div>`;
   }).join("") : `<div class="empty">${t("noModel")}</div>`;
   $("#efficiencySummary").textContent = `${t("cacheRate")} = ${t("cached")} ÷ ${t("input")} · ${state.locale === "en" ? "Average per event" : "平均每个用量事件"} ${formatNumber(data.eventCount ? data.totals.total/data.eventCount : 0)} Token`;
@@ -548,24 +707,21 @@ function renderExtraAnalysis(data, timelineData = data) {
 
 document.fonts.ready.then(scheduleScrollUpdate);
 // Use the sticky header's real lower edge as the reading line.
+const primaryNav = $(".primary-nav");
+const navButtons = [...primaryNav.querySelectorAll("[data-target]")];
 let scrollFrame = 0;
 let navigationTarget = null;
 let navigationTimeout = null;
 function setActiveNavigation(target) {
-  let activeButton;
-  $$("[data-target]").forEach((button) => {
+  for (const button of navButtons) {
     const active = button.dataset.target === target;
     button.classList.toggle("active", active);
-    if (active) activeButton = button;
-    if (active) button.setAttribute("aria-current","location");
-    else button.removeAttribute("aria-current");
-  });
-  const indicator = $(".nav-indicator");
-  if (indicator && activeButton) {
-    if (window.matchMedia("(max-width: 640px)").matches) {
-      indicator.style.setProperty("--nav-x", `${activeButton.offsetLeft}px`);
-      indicator.style.setProperty("--nav-width", `${activeButton.offsetWidth}px`);
-    } else indicator.style.setProperty("--nav-y", `${activeButton.offsetTop}px`);
+    if (active) {
+      button.setAttribute("aria-current","location");
+      const center = `${button.offsetLeft + button.offsetWidth / 2}px`;
+      if (primaryNav.style.getPropertyValue("--nav-center") !== center) primaryNav.style.setProperty("--nav-center", center);
+      primaryNav.classList.add("has-marker");
+    } else button.removeAttribute("aria-current");
   }
 }
 function releaseNavigation() { navigationTarget = null; clearTimeout(navigationTimeout); scheduleScrollUpdate(); }
@@ -575,18 +731,15 @@ window.addEventListener("scrollend", releaseNavigation);
 function updateScrollState() {
   scrollFrame = 0;
   const header = $(".topbar");
-  const compact = header.classList.contains("is-compact");
-  if (!compact && window.scrollY > 110) header.classList.add("is-compact");
-  else if (compact && window.scrollY < 35) header.classList.remove("is-compact");
-  const edge = Math.max(0, header.getBoundingClientRect().bottom) + 28;
+  header.classList.toggle("has-scrolled", window.scrollY > 5);
+  const edge = Math.max(0, header.getBoundingClientRect().bottom) + 18;
   const offset = `${Math.ceil(edge)}px`;
   if (document.documentElement.style.getPropertyValue("--anchor-offset") !== offset) document.documentElement.style.setProperty("--anchor-offset", offset);
-  const buttons = $$("[data-target]");
-  let active = buttons[0];
-  for (const button of buttons) {
+  let active = navButtons[0];
+  for (const button of navButtons) {
     if (document.getElementById(button.dataset.target).getBoundingClientRect().top <= edge + 12) active = button;
   }
-  if (window.scrollY > 0 && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 3) active = buttons.at(-1);
+  if (window.scrollY > 0 && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 3) active = navButtons.at(-1);
   setActiveNavigation(navigationTarget || active.dataset.target);
 }
 function scheduleScrollUpdate() {
@@ -604,7 +757,6 @@ function render(data) {
   state.data = data;
   const useContextTimeline = data.range === "1" && state.contextData?.daily?.length > 1;
   const timelineData = useContextTimeline ? state.contextData : data;
-  $("#trendHint").textContent = useContextTimeline ? t("recentReference") + t("hoverDetail") : t("hoverDetail");
   $("#heatHint").textContent = useContextTimeline ? t("recentReference") + t("heatHint") : t("heatHint");
   $("#cacheHint").textContent = useContextTimeline ? t("recentReference") + `${t("cachedInput")} ÷ ${t("input")}` : t("cacheHint");
   $("#cumulativeHint").textContent = useContextTimeline ? t("recentReference") + t("cumulativeHint").split(" · ")[0] : t("cumulativeHint");
@@ -629,8 +781,8 @@ async function refresh({ animate = false, notify = false } = {}) {
   const requestId = ++state.requestId;
   if (state.controller) state.controller.abort();
   state.controller = new AbortController();
-  const button = $("#refresh"); button.classList.add("loading"); button.disabled = true;
-  document.body.classList.add("is-updating");
+  const button = $("#refresh"); button.classList.toggle("loading", animate); button.disabled = true;
+  document.body.classList.toggle("is-updating", animate);
   document.body.setAttribute("aria-busy", "true");
   updateExportAvailability();
   try {
@@ -662,11 +814,11 @@ async function refresh({ animate = false, notify = false } = {}) {
     if (requestId === state.requestId) {
       document.body.classList.remove("is-updating");
       document.body.setAttribute("aria-busy", "false");
-      updateExportAvailability();
       button.classList.remove("loading"); button.disabled = false;
+      updateExportAvailability();
       state.nextRefresh = Date.now() + 30_000;
       clearTimeout(state.timer);
-       state.timer = setTimeout(refresh, 30_000);
+      state.timer = setTimeout(refresh, 30_000);
     }
   }
 }
@@ -702,14 +854,13 @@ rangeInput.addEventListener("pointerup", (event) => {
 rangeInput.addEventListener("pointercancel", () => { rangePointer = null; rangeInput.value = String(rangeValues.indexOf(state.range)); updateRangeUI(); });
 rangeInput.addEventListener("input", () => updateRangeUI(Number(rangeInput.value)));
 rangeInput.addEventListener("change", commitRange);
-$$('[data-target]').forEach((button) => button.addEventListener("click", () => {
+navButtons.forEach((button) => button.addEventListener("click", () => {
   hideTooltip();
   navigationTarget = button.dataset.target;
   setActiveNavigation(navigationTarget);
   clearTimeout(navigationTimeout);
   navigationTimeout = setTimeout(releaseNavigation, 1400);
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  document.getElementById(button.dataset.target).scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "start" });
+  document.getElementById(button.dataset.target).scrollIntoView({ behavior: reducedMotion.matches ? "instant" : "smooth", block: "start" });
 }));
 $("#refresh").addEventListener("click", () => refresh({ animate:true, notify:true }));
 function savePreference(key, value) {
@@ -727,13 +878,13 @@ function updateClock() {
 
 document.body.setAttribute("aria-busy", "true");
 document.addEventListener("click", (event) => {
-  if (!event.target.closest(".heat-cell[data-hour], .hover-target, .hourly-column")) hideTooltip();
+  if (!event.target.closest(".heat-cell[data-hour], .hover-target, .hourly-column, .pie-slice")) hideTooltip();
   const menu = $("#headerExport");
   if (menu.open && !menu.contains(event.target)) menu.open = false;
 });
 document.addEventListener("keydown", (event) => { if (event.key === "Escape") { $("#headerExport").open = false; hideTooltip(); } });
 $$("[data-export], .export-actions a").forEach((link) => link.addEventListener("click", (event) => {
-  if (!state.data || document.body.classList.contains("is-updating")) { event.preventDefault(); showToast(t("loading")); return; }
+  if (link.getAttribute("aria-disabled") === "true") { event.preventDefault(); showToast(t("loading")); return; }
   $("#headerExport").open = false; showToast(t("exportStarted"));
 }));
 refresh({ animate:true });

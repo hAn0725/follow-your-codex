@@ -22,7 +22,7 @@
 
 ## 设计取舍
 
-新版首页仅统计 GPT / Codex 的 Token 与美元 API 等值花费，右侧显示额度状态，下方提供轻量统计卡片和平滑面积曲线。DeepSeek、MiMo、GLM、Qwen 事件会在进入仪表盘统计、排行、趋势与导出前过滤。API 等值花费按模型的非缓存输入、缓存输入和输出分别计算；标准短上下文参考单价核对于 2026-10-03，来源为 OpenAI 官方价格页。GPT-6 Astra、GPT-6 Sol、GPT-6.1 Sol、GPT-6 Luna 已使用对应规则。不包含阶梯长上下文、快速模式、工具附加费、活动优惠或区域附加费；未精确匹配模型会保留用量、但不计入金额。计价规则位于 src/pricing.js。
+新版首页仅统计 GPT / Codex 的 Token 与美元 API 等值花费，右侧显示额度状态，下方提供轻量统计卡片和平滑面积曲线。DeepSeek、MiMo、GLM、Qwen、`openrouter/stealth-union-alpha` 及无法识别模型名的用量会在进入仪表盘统计、排行、趋势与导出前过滤。API 等值花费按模型的非缓存输入、缓存输入和输出分别计算；标准短上下文参考单价核对于 2026-10-03，来源为 OpenAI 官方价格页。GPT-6 Astra、GPT-6 Sol、GPT-6.1 Sol、GPT-6 Luna 已使用对应规则。不包含阶梯长上下文、快速模式、工具附加费、活动优惠或区域附加费；有模型名但缺少单价的记录只计入用量。计价规则位于 src/pricing.js。
 
 GPT-6.1 Terra 的标准短上下文价格于 2026-10-27 单独核对：[输入 $1、缓存输入 $0.05、输出 $5 / 百万 Token](https://developers.openai.com/api/docs/models/gpt-6.1-terra)。这仍是 API 等值参考，并非订阅实付费用。
 

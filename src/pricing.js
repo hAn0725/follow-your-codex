@@ -33,6 +33,7 @@ const RULES = [
 ];
 
 const EXCLUDED_EXTERNAL_MODEL = /(?:deepseek|mimo|glm|qwen)/i;
+const EXCLUDED_MODEL_IDS = new Set(["", "unknown", "unknown model", "stealth-union-alpha"]);
 
 function normalizedModel(model) {
   const raw = String(model || "").trim().toLowerCase();
@@ -40,8 +41,8 @@ function normalizedModel(model) {
   return bare.replace(/-\d{4}-\d{2}-\d{2}$/, "");
 }
 
-function isExcludedExternalModel(model) {
-  return EXCLUDED_EXTERNAL_MODEL.test(String(model || ""));
+function isExcludedModel(model) {
+  return EXCLUDED_EXTERNAL_MODEL.test(String(model || "")) || EXCLUDED_MODEL_IDS.has(normalizedModel(model));
 }
 
 function resolvePrice(model) {
@@ -75,7 +76,7 @@ function estimateCost(events) {
   let unpricedTokens = 0;
 
   for (const { model, usage } of events) {
-    if (isExcludedExternalModel(model)) continue;
+    if (isExcludedModel(model)) continue;
     const price = resolvePrice(model);
     if (!price) {
       unpricedTokens += Number(usage.total) || 0;
@@ -116,4 +117,4 @@ function estimateCost(events) {
   };
 }
 
-module.exports = { estimateCost, isExcludedExternalModel, resolvePrice, normalizedModel, PROVIDERS };
+module.exports = { estimateCost, isExcludedModel, resolvePrice, normalizedModel, PROVIDERS };

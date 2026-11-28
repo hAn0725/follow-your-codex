@@ -7,13 +7,13 @@ const { estimateCost } = require("../src/pricing");
 
 test("pricing separates cached input, includes reasoning only once, and exposes unknown prices", () => {
   const usage = { input: 1000000, cached: 400000, output: 100000, reasoning: 50000, total: 1100000 };
-  const cost = estimateCost([{ model: "gpt-5.5", usage }, { model: "unknown", usage }]);
+  const cost = estimateCost([{ model: "gpt-5.5", usage }, { model: "gpt-unpriced-preview", usage }]);
   assert.ok(Math.abs(cost.usd - 6.2) < 1e-9);
   assert.equal(cost.unpricedTokens, 1100000);
-  assert.deepEqual(cost.unknownModels, ["unknown"]);
+  assert.deepEqual(cost.unknownModels, ["gpt-unpriced-preview"]);
 });
 
-test("pricing excludes DeepSeek, MiMo, Qwen, and GLM from all estimates", () => {
+test("pricing skips excluded providers, Stealth Union Alpha, and missing model names", () => {
   const usage = { input: 1000000, cached: 500000, output: 1000000, reasoning: 0, total: 2000000 };
   const cost = estimateCost([
     { model: "gpt-5.5", usage },
@@ -21,6 +21,10 @@ test("pricing excludes DeepSeek, MiMo, Qwen, and GLM from all estimates", () => 
     { model: "mimo-v2", usage },
     { model: "qwen-cloud/qwen3.8-flash", usage },
     { model: "glm-cloud/glm-4.7", usage },
+    { model: "openrouter/stealth-union-alpha", usage },
+    { model: "Unknown model", usage },
+    { model: "unknown", usage },
+    { model: "", usage },
   ]);
   assert.equal(cost.providers.openai.currency, "USD");
   assert.ok(Math.abs(cost.providers.openai.amount - 32.75) < 1e-9);

@@ -271,12 +271,47 @@ test("one-day view uses the last 24 hours with exact boundaries and hourly total
   assert.equal(view.timeline.buckets[1].usage.total, 50);
   assert.equal(view.timeline.buckets[23].usage.total, 60);
   assert.equal(view.timeline.buckets.reduce((sum, row) => sum + row.usage.total, 0), 180);
+  assert.ok(Math.abs(view.timeline.buckets[0].estimatedUsd - 70 * 2 / 1e6) < 1e-12);
+  assert.equal(view.timeline.buckets.reduce((sum, row) => sum + row.pricedTokens, 0), 180);
   assert.equal(view.totals.total, 180);
   assert.equal(view.daily.reduce((sum, row) => sum + row.usage.total, 0), 180);
   assert.equal(view.insights.averagePerDay, 180);
   assert.equal(view.insights.comparison.previousTotal, 30);
   assert.equal(view.insights.recentAverage, 210 / 7);
   assert.equal(view.eventCount, 4);
+});
+
+test("cost series reconcile by day and hour, including cache corrections and unpriced usage", () => {
+  const now = new Date("2026-10-26T20:17:42Z");
+  const usage = (input, cached, output) => ({ input, cached, output, reasoning: 0, total: input + output });
+  const events = [
+    { model: "gpt-6.2-sol", usage: usage(100_000, 150_000, 10_000) },
+    { model: "gpt-6.2-sol", usage: usage(200_000, 0, 0) },
+    { model: "gpt-preview-without-rate", usage: usage(200_000, 0, 0) },
+    { model: "openrouter/stealth-union-alpha", usage: usage(500_000, 0, 0) },
+  ].map((event) => ({ ...event, timestamp: +now - 2000 }));
+  const view = buildView({ events, sessions: [] }, "1", now);
+  const day = view.daily.find((row) => row.events);
+  const hour = view.timeline.buckets.at(-1);
+  assert.ok(Math.abs(day.estimatedUsd - 0.51) < 1e-12);
+  assert.equal(day.estimatedUsd, view.cost.usd);
+  assert.equal(hour.estimatedUsd, view.cost.usd);
+  assert.equal(day.unpricedTokens, 200_000);
+  assert.equal(hour.pricedTokens, 310_000);
+  assert.equal(day.models.length, 2);
+  assert.equal(day.models.find((row) => row.name === "gpt-preview-without-rate").estimatedUsd, null);
+  assert.equal(day.models.find((row) => row.name === "gpt-6.2-sol").estimatedUsd, view.cost.usd);
+});
+
+test("quota pacing uses sample time and omits reset or incomplete windows", () => {
+  const sampledAt = Date.parse("2026-10-26T17:15:00Z");
+  const resetsAt = Date.parse("2026-10-26T21:00:00Z");
+  const latestLimits = { timestamp: sampledAt, primary: { usedPercent: 46, resetsAt, windowMinutes: 300 },
+    secondary: { usedPercent: 12, resetsAt, windowMinutes: null } };
+  const snapshot = { events: [], sessions: [], latestLimits };
+  const view = buildView(snapshot, "7", new Date("2026-10-26T18:00:00Z"));
+  assert.deepEqual(view.quotaPace, { primary: { elapsedPercent: 25, delta: 21 }, secondary: null });
+  assert.equal(buildView(snapshot, "7", new Date(resetsAt)).quotaPace.primary, null);
 });
 
 test("empty rolling day retains 24 zero buckets and longer ranges stay daily", () => {
@@ -311,4 +346,34 @@ test("buildView removes excluded external-provider events before all dashboard a
   assert.deepEqual(view.projects.map((project) => project.name), ["gpt"]);
   assert.deepEqual(view.sessions.map((session) => session.id), ["gpt-session"]);
   assert.equal(view.cost.usd > 0, true);
+});
+
+test("unidentified records and Stealth Union Alpha stay out of rolling usage and mixed-session totals", () => {
+  const current = "2026-09-08T12:00:00Z";
+  const previous = "2026-09-07T11:00:00Z";
+  const usage = { input_tokens: 100, output_tokens: 20, total_tokens: 120 };
+  const record = (timestamp, turn_id) => ({
+    type: "token_usage_record", timestamp, payload: { turn_id, response_id: turn_id, usage },
+  });
+  const parsed = parseSessionText(jsonl([
+    { type: "session_meta", payload: { id: "mixed", cwd: "C:\\work\\gpt" } },
+    record(previous, "previous-missing"),
+    { type: "turn_context", payload: { turn_id: "gpt", model: "gpt-6.2-sol" } },
+    record(current, "gpt"),
+    { type: "turn_context", payload: { turn_id: "excluded", model: "openrouter/stealth-union-alpha" } },
+    record(current, "excluded"),
+    record(current, "current-missing"),
+  ]), "mixed-rollout.jsonl");
+  const snapshot = aggregate([parsed], "C:\\Users\\demo\\.codex");
+  const view = buildView(snapshot, "1", new Date("2026-09-08T15:00:00Z"));
+
+  assert.equal(snapshot.events.length, 4);
+  assert.equal(view.totals.total, 120);
+  assert.equal(view.eventCount, 1);
+  assert.equal(view.timeline.buckets.reduce((sum, bucket) => sum + bucket.usage.total, 0), 120);
+  assert.equal(view.insights.comparison.previousTotal, 0);
+  assert.equal(view.insights.recentAverage, 120 / 7);
+  assert.deepEqual(view.models.map((model) => model.name), ["gpt-6.2-sol"]);
+  assert.equal(view.sessions[0].model, "gpt-6.2-sol");
+  assert.equal(view.cost.unpricedTokens, 0);
 });

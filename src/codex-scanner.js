@@ -6,7 +6,7 @@ const path = require("node:path");
 const zlib = require("node:zlib");
 const crypto = require("node:crypto");
 const { version } = require("../package.json");
-const { estimateCost, isExcludedExternalModel, resolvePrice } = require("./pricing");
+const { estimateCost, isExcludedModel, resolvePrice } = require("./pricing");
 
 const TOKEN_FIELDS = ["input", "cached", "output", "reasoning", "total"];
 const CACHE_VERSION = 2;
@@ -475,11 +475,27 @@ function dateKeysForRange(range, events, now = new Date()) {
   return keys;
 }
 
+function quotaPace(window, sampledAt, now) {
+  if (!window || !Number.isFinite(sampledAt) || !Number.isFinite(window.resetsAt)
+    || !Number.isFinite(window.windowMinutes) || window.windowMinutes <= 0
+    || !Number.isFinite(window.usedPercent) || sampledAt > now || now >= window.resetsAt) return null;
+  const duration = window.windowMinutes * 60_000;
+  const elapsed = sampledAt - (window.resetsAt - duration);
+  if (elapsed <= 0 || elapsed >= duration) return null;
+  const elapsedPercent = Math.round(elapsed / duration * 1000) / 10;
+  return { elapsedPercent, delta: Math.round((window.usedPercent - elapsedPercent) * 10) / 10 };
+}
+
+function priceSeriesBucket(events) {
+  const { usd, pricedTokens, unpricedTokens, models } = estimateCost(events);
+  return { estimatedUsd: usd, pricedTokens, unpricedTokens, models };
+}
+
 function buildView(snapshot, range = "30", now = new Date()) {
   const start = rangeStart(range, now);
-  const selected = snapshot.events.filter((event) => (
-    event.timestamp >= start && event.timestamp <= now.getTime() && !isExcludedExternalModel(event.model)
-  ));
+  const end = now.getTime();
+  const includedEvents = snapshot.events.filter((event) => !isExcludedModel(event.model));
+  const selected = includedEvents.filter((event) => event.timestamp >= start && event.timestamp <= end);
   const totals = selected.reduce((sum, event) => addUsage(sum, event.usage), emptyUsage());
   const todayKey = localDateKey(now.getTime());
   const today = selected
@@ -490,19 +506,19 @@ function buildView(snapshot, range = "30", now = new Date()) {
   const dayEvents = new Map();
   for (const key of dateKeysForRange(range, selected, now)) {
     dayMap.set(key, emptyUsage());
-    dayEvents.set(key, 0);
   }
   for (const event of selected) {
     const key = localDateKey(event.timestamp);
     if (!dayMap.has(key)) dayMap.set(key, emptyUsage());
     addUsage(dayMap.get(key), event.usage);
-    dayEvents.set(key, (dayEvents.get(key) || 0) + 1);
+    if (!dayEvents.has(key)) dayEvents.set(key, []);
+    dayEvents.get(key).push(event);
   }
 
   const modelMap = new Map();
   const projectMap = new Map();
   for (const event of selected) {
-    const model = event.model || "Unknown model";
+    const model = event.model;
     const project = event.project || "Unknown project";
     if (!modelMap.has(model)) modelMap.set(model, emptyUsage());
     if (!projectMap.has(project)) projectMap.set(project, emptyUsage());
@@ -525,6 +541,7 @@ function buildView(snapshot, range = "30", now = new Date()) {
       const usage = sessionEvents.reduce((sum, event) => addUsage(sum, event.usage), emptyUsage());
       return {
         ...session,
+        model: sessionEvents.at(-1)?.model ?? session.model,
         firstAt: sessionEvents.length ? sessionEvents[0].timestamp : session.firstAt,
         updatedAt: sessionEvents.length ? sessionEvents.at(-1).timestamp : session.updatedAt,
         eventCount: sessionEvents.length,
@@ -537,18 +554,27 @@ function buildView(snapshot, range = "30", now = new Date()) {
     .filter((session) => hasUsage(session.usage))
     .sort((a, b) => b.usage.total - a.usage.total);
 
-  const daily = [...dayMap.entries()].map(([date, usage]) => ({
-    date,
-    usage,
-    events: dayEvents.get(date) || 0,
-  }));
+  const daily = [...dayMap.entries()].map(([date, usage]) => {
+    const events = dayEvents.get(date) || [];
+    const modelUsage = new Map();
+    for (const { model, usage: eventUsage } of events) {
+      if (!modelUsage.has(model)) modelUsage.set(model, emptyUsage());
+      addUsage(modelUsage.get(model), eventUsage);
+    }
+    const { models, ...price } = priceSeriesBucket(events);
+    const prices = new Map(models.map((row) => [row.model, row.amount]));
+    return {
+      date, usage, events: events.length, ...price,
+      models: rank(modelUsage).map((row) => ({ ...row, estimatedUsd: prices.get(row.name) ?? null })),
+    };
+  });
   const activeRows = daily.filter((item) => item.usage.total > 0);
   const peakDay = activeRows.reduce((peak, item) => !peak || item.usage.total > peak.usage.total ? item : peak, null);
   const daysInRange = range === "1" ? 1 : Math.max(1, daily.length);
   const averagePerDay = totals.total / daysInRange;
   const recentStart = rangeStart("7", now);
-  const recentAverage = snapshot.events
-    .filter((event) => event.timestamp >= recentStart && event.timestamp <= now.getTime() && !isExcludedExternalModel(event.model))
+  const recentAverage = includedEvents
+    .filter((event) => event.timestamp >= recentStart && event.timestamp <= end)
     .reduce((sum, event) => sum + event.usage.total, 0) / 7;
 
   const numericDays = range === "all" ? null : Math.max(1, Number.parseInt(range, 10) || 30);
@@ -557,8 +583,8 @@ function buildView(snapshot, range = "30", now = new Date()) {
     const previousStart = range === "1" ? start - 24 * 60 * 60 * 1000
       : new Date(now.getFullYear(), now.getMonth(), now.getDate() - numericDays * 2 + 1).getTime();
     const previousEnd = start;
-    const previousTotal = snapshot.events
-      .filter((event) => event.timestamp >= previousStart && event.timestamp < previousEnd && !isExcludedExternalModel(event.model))
+    const previousTotal = includedEvents
+      .filter((event) => event.timestamp >= previousStart && event.timestamp < previousEnd)
       .reduce((sum, event) => sum + event.usage.total, 0);
     comparison = {
       previousTotal,
@@ -608,11 +634,17 @@ function buildView(snapshot, range = "30", now = new Date()) {
     })),
   } : null;
   if (timeline) {
+    const bucketEvents = timeline.buckets.map(() => []);
     for (const event of selected) {
       const index = Math.min(23, Math.floor((event.timestamp - start) / 3_600_000));
       addUsage(timeline.buckets[index].usage, event.usage);
       timeline.buckets[index].events += 1;
+      bucketEvents[index].push(event);
     }
+    timeline.buckets.forEach((bucket, index) => {
+      const { estimatedUsd, pricedTokens, unpricedTokens } = priceSeriesBucket(bucketEvents[index]);
+      Object.assign(bucket, { estimatedUsd, pricedTokens, unpricedTokens });
+    });
   }
   const costByModel = new Map(cost.models.map((row) => [row.model, row]));
   const models = rank(modelMap).map((row) => {
@@ -644,7 +676,7 @@ function buildView(snapshot, range = "30", now = new Date()) {
     totals,
     today,
     cost,
-    todayCost: estimateCost(selected.filter((event) => localDateKey(event.timestamp) === todayKey)),
+    todayCost: estimateCost(dayEvents.get(todayKey) || []),
     daily,
     timeline,
     hourly: hourMap,
@@ -666,6 +698,10 @@ function buildView(snapshot, range = "30", now = new Date()) {
       comparison,
     },
     latestLimits: snapshot.latestLimits,
+    quotaPace: snapshot.latestLimits ? {
+      primary: quotaPace(snapshot.latestLimits.primary, snapshot.latestLimits.timestamp, end),
+      secondary: quotaPace(snapshot.latestLimits.secondary, snapshot.latestLimits.timestamp, end),
+    } : null,
     latestContext: snapshot.latestContext,
   };
 }
